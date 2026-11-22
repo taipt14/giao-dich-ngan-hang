@@ -25,7 +25,8 @@ Hệ thống mô phỏng nghiệp vụ chuyển khoản của một ngân hàng 
 | Auth | Keycloak (OAuth2 / JWT) |
 | Resilience | Resilience4j |
 | Observability | Micrometer Tracing, Zipkin, Prometheus, Grafana |
-| Test | JUnit 5, Testcontainers, AssertJ |
+| Test | JUnit 5, Testcontainers, AssertJ, Awaitility, ArchUnit |
+| Kiểm tra code | Spotless (palantir-java-format), Checkstyle, maven-enforcer (xem mục 20 `convention-code.md`) |
 
 ## 3. Các service
 
@@ -63,6 +64,16 @@ giao-dich-ngan-hang/
 ├── docs/
 └── backlog/
 ```
+
+Service dùng module common nào:
+
+| Module | Service phải thêm | Khi nào thêm | Lý do |
+|---|---|---|---|
+| `common-core` | Mọi service servlet (trừ `api-gateway`) | Task đầu tiên của service có API REST | `GlobalExceptionHandler` tự bật khi có dependency; thiếu nó thì lỗi không theo `ErrorResponse` chung |
+| `common-events` | Service có producer hoặc consumer Kafka | Task đầu tiên của service gửi/nhận event | Dùng chung `EventEnvelope`, `Topics` và cấu hình JSON; tự viết lại sẽ lệch format event |
+| `common-test` | Mọi service có integration test cần Oracle/Kafka/Redis (scope `test`) | Khi viết `*IT` đầu tiên của service | Container dùng chung trong JVM, build nhanh hơn nhiều so với mỗi test tự khởi container |
+
+`api-gateway` chạy WebFlux nên không dùng `GlobalExceptionHandler` của `common-core`; nó dùng record `ErrorResponse` (package `vn.bank.common.error`, không phụ thuộc Spring) với handler lỗi riêng (BANK-011).
 
 Package trong mỗi service:
 ```

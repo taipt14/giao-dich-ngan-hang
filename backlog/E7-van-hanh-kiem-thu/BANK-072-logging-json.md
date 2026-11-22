@@ -3,7 +3,7 @@ id: BANK-072
 epic: E7
 title: Chuẩn hóa log dạng JSON
 priority: Low
-depends_on: [BANK-070]
+depends_on: [BANK-070, BANK-076]
 status: TODO
 ---
 
@@ -30,6 +30,7 @@ Log phải đọc được bằng máy và tra được theo traceId, transferId
 
 ## Phụ thuộc
 - [BANK-070: Tracing phân tán qua REST và Kafka](BANK-070-distributed-tracing.md)
+- [BANK-076: Đóng gói service thành Docker image và chạy bằng profile docker](BANK-076-docker-image-va-profile.md)
 
 ## Tài liệu tham khảo
 - [Kiến trúc](../../docs/kien-truc.md)
