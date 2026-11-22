@@ -8,24 +8,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.web.client.RestClient;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.oracle.OracleContainer;
+import vn.bank.common.test.AbstractIntegrationTest;
 
-@Testcontainers
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-class AccountServiceApplicationIT {
+class AccountServiceApplicationIT extends AbstractIntegrationTest {
 
     private static final String SERVICE_SCHEMA = "ACCOUNT_SVC";
-    private static final String ORACLE_IMAGE = "gvenzl/oracle-free:23.6-slim-faststart";
-
-    // Container chi co user SERVICE_SCHEMA; username lay tu application.yml (khong override)
-    // nen neu service cau hinh user cua schema khac thi se khong ket noi duoc
-    @Container
-    static final OracleContainer ORACLE = new OracleContainer(ORACLE_IMAGE).withUsername(SERVICE_SCHEMA);
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -34,12 +23,6 @@ class AccountServiceApplicationIT {
 
     AccountServiceApplicationIT(@Autowired JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
-    }
-
-    @DynamicPropertySource
-    static void oracleProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", ORACLE::getJdbcUrl);
-        registry.add("spring.datasource.password", ORACLE::getPassword);
     }
 
     @Test
@@ -73,9 +56,11 @@ class AccountServiceApplicationIT {
         assertThat(processedMessageOwners).containsExactly(SERVICE_SCHEMA);
     }
 
+    // Container co user cua moi schema voi cung mat khau, nen service cau hinh nham username van ket noi duoc:
+    // chi assert nay bat duoc loi do
     @Test
     void should_connectAsOwnSchemaUser_when_serviceStarted() {
-        // given: datasource cau hinh trong application.yml
+        // given: username tu application.yml, URL va mat khau tu AbstractIntegrationTest
 
         // when
         var sessionUser = jdbcTemplate.queryForObject("select user from dual", String.class);

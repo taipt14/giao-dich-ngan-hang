@@ -98,6 +98,38 @@ docker compose -f infra/docker-compose.yml up -d --wait
 Đổi mật khẩu trong `infra/.env` **không** có tác dụng với schema đã tạo (script init chỉ chạy khi volume
 Oracle còn trống) → cần reset dữ liệu Oracle để áp dụng mật khẩu mới.
 
+## Integration test (Testcontainers)
+
+Integration test (`*IT`) kế thừa `AbstractIntegrationTest` (module `common/common-test`) và tự khởi container
+Oracle, Kafka, Redis riêng, **không** dùng các container của `docker-compose.yml`.
+
+- Container Oracle chạy đúng script `infra/oracle/init/01_create_service_schemas.sh` ở trên, mật khẩu mọi schema là
+  `test`. Thêm schema mới chỉ cần sửa mảng `SERVICE_SCHEMAS` trong script, không phải sửa `common-test`.
+- Đường dẫn gốc repo truyền cho test qua system property `bank.test.repo-root` (failsafe tự đặt từ
+  `${maven.multiModuleProjectDirectory}`). Chạy `*IT` từ IDE không qua Maven thì thêm VM option
+  `-Dbank.test.repo-root=<đường dẫn gốc repo>`.
+
+### Bật reuse container trên máy dev
+
+Mặc định mỗi lần chạy `verify`, mỗi module khởi container mới (~45 giây cho Oracle). Trên máy dev có thể giữ
+container sống giữa các lần chạy bằng cách thêm dòng sau vào `~/.testcontainers.properties`
+(Windows: `C:\Users\<user>\.testcontainers.properties`; tạo file nếu chưa có):
+
+```properties
+testcontainers.reuse.enable=true
+```
+
+- Lần chạy sau dùng lại container đang chạy có cùng cấu hình (log Testcontainers báo `Reusing container`).
+  Sửa script init Oracle hoặc image → cấu hình đổi → Testcontainers tạo container mới.
+- Dữ liệu của lần chạy trước (bảng, topic, key Redis) vẫn còn: test phải tự tạo dữ liệu riêng, không giả định DB trống.
+- Container reuse **không** tự bị xóa khi test xong (Ryuk bỏ qua container reuse). Dọn bằng:
+
+  ```bash
+  docker rm -f $(docker ps -aq --filter label=org.testcontainers.hash)
+  ```
+
+- CI không bật cờ này nên CI luôn dùng container mới mỗi lần chạy.
+
 ## Xử lý sự cố
 
 | Hiện tượng | Nguyên nhân thường gặp |

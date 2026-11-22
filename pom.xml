@@ -116,6 +116,10 @@
                     <configuration>
                         <!-- Dung class goc thay vi jar da repackage boi spring-boot-maven-plugin -->
                         <classesDirectory>${project.build.outputDirectory}</classesDirectory>
+                        <systemPropertyVariables>
+                            <!-- AbstractIntegrationTest doc script init Oracle tu infra/ cua goc repo -->
+                            <bank.test.repo-root>${maven.multiModuleProjectDirectory}</bank.test.repo-root>
+                        </systemPropertyVariables>
                     </configuration>
                     <executions>
                         <execution>
