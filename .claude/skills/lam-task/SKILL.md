@@ -75,4 +75,4 @@ Kiểm tra lần lượt và ghi kết quả từng mục:
 - Không tắt, xóa hoặc `@Disabled` test để build pass.
 - Không sửa nội dung file task, trừ trường `status`.
 - Không thêm dependency ngoài danh sách công nghệ trong `kien-truc.md` mà chưa hỏi.
-- Không tự đặt `status: DONE`. Chỉ tôi được đặt trạng thái này.
+- Không tự đặt `status: DONE`. Chỉ tôi được đặt trạng thái này (ngoại lệ: khi chạy trong `/lam-epic`, người điều phối đặt DONE sau khi kiểm chứng).
