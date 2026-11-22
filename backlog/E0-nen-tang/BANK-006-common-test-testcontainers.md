@@ -4,7 +4,7 @@ epic: E0
 title: common-test: base class Testcontainers dùng chung
 priority: Medium
 depends_on: [BANK-002, BANK-003]
-status: TODO
+status: DONE
 ---
 
 # BANK-006: common-test: base class Testcontainers dùng chung
