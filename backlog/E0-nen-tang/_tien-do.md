@@ -7,4 +7,4 @@
 | BANK-004 | DONE | feat(BANK-004) | 16 mới (13 unit + 3 IT), toàn repo 35 pass | Auto-config chỉ cho SERVLET; spring-webmvc optional; chưa thêm common-core vào service |
 | BANK-005 | DONE | feat(BANK-005) | 11 unit mới, toàn repo 46 pass | Jackson 3 + Spring Kafka 4; JsonMapper riêng cho event; acks/idempotence là mặc định ghi đè được; traceId cho phép null |
 | BANK-006 | DONE | feat(BANK-006) | 6 IT mới ở account-service, toàn repo 52 pass | Container singleton static (Ryuk dọn); @DynamicPropertySource giữ username từ application.yml; 5 service khác chưa chuyển sang base class |
-| BANK-007 | BLOCKED | chore(BANK-007) | — (kiểm gián tiếp: lệnh CI chạy cục bộ pass; test fail → exit 1) | 2 AC cần workflow chạy thật trên GitHub, lần chạy epic cấm push. `.github/workflows/ci.yml` để chưa commit trong working tree |
+| BANK-007 | DONE | ci(BANK-007), fix(BANK-007) | CI GitHub: xanh trên PR #1 và run 45050152852; đỏ khi có test fail (run 45050014019) | mvnw đặt mode 100755, bỏ bước chmod trong workflow |
