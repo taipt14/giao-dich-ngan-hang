@@ -32,6 +32,7 @@ class SharedContainersReuseIT extends AbstractIntegrationTest {
         // then
         assertThat(current).isEqualTo(firstSeen);
         assertThat(ORACLE.isRunning() && KAFKA.isRunning() && REDIS.isRunning()).isTrue();
-        assertThat(jdbcTemplate.queryForObject("select 1 from dual", Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("select 1 from dual", Integer.class))
+                .isEqualTo(1);
     }
 }

@@ -96,7 +96,8 @@ class GlobalExceptionHandlerTest {
                 """;
 
         // when
-        var result = mockMvc.perform(post("/validated").contentType(MediaType.APPLICATION_JSON).content(body));
+        var result = mockMvc.perform(
+                post("/validated").contentType(MediaType.APPLICATION_JSON).content(body));
 
         // then
         result.andExpect(status().isBadRequest())
@@ -137,7 +138,8 @@ class GlobalExceptionHandlerTest {
         var body = "{not-json";
 
         // when
-        var result = mockMvc.perform(post("/validated").contentType(MediaType.APPLICATION_JSON).content(body));
+        var result = mockMvc.perform(
+                post("/validated").contentType(MediaType.APPLICATION_JSON).content(body));
 
         // then
         result.andExpect(status().isBadRequest())

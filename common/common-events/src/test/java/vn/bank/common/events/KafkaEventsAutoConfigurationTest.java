@@ -15,8 +15,7 @@ import org.springframework.kafka.support.serializer.JacksonJsonSerializer;
 class KafkaEventsAutoConfigurationTest {
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
-            .withConfiguration(
-                    AutoConfigurations.of(KafkaEventsAutoConfiguration.class, KafkaAutoConfiguration.class));
+            .withConfiguration(AutoConfigurations.of(KafkaEventsAutoConfiguration.class, KafkaAutoConfiguration.class));
 
     @Test
     void should_useAcksAllAndIdempotence_when_producerNotConfigured() {
@@ -52,7 +51,8 @@ class KafkaEventsAutoConfigurationTest {
 
             // then
             assertThat(factory.getValueSerializer()).isInstanceOf(JacksonJsonSerializer.class);
-            assertThat(((JacksonJsonSerializer<?>) factory.getValueSerializer()).isAddTypeInfo()).isFalse();
+            assertThat(((JacksonJsonSerializer<?>) factory.getValueSerializer()).isAddTypeInfo())
+                    .isFalse();
         });
     }
 

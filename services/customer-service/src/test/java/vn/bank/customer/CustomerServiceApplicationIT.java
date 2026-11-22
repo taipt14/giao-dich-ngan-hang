@@ -79,8 +79,8 @@ class CustomerServiceApplicationIT {
 
         // when
         var sessionUser = jdbcTemplate.queryForObject("select user from dual", String.class);
-        var currentSchema = jdbcTemplate.queryForObject(
-                "select sys_context('USERENV', 'CURRENT_SCHEMA') from dual", String.class);
+        var currentSchema =
+                jdbcTemplate.queryForObject("select sys_context('USERENV', 'CURRENT_SCHEMA') from dual", String.class);
 
         // then
         assertThat(sessionUser).isEqualTo(SERVICE_SCHEMA);

@@ -501,10 +501,10 @@ Những quy tắc dưới đây được ép bằng build. Vi phạm → `mvnw v
 
 | Công cụ | Kiểm tra |
 |---|---|
-| **Spotless** (palantir-java-format) | Format code, thứ tự import, không wildcard import. Sửa tự động: `./mvnw spotless:apply` |
-| **Checkstyle** | Cấm field injection, `System.out`, `printStackTrace`; độ dài method/class |
-| **ArchUnit** | Quy tắc tầng mục 2; controller không dùng repository; không dùng `double`/`float` cho field tiền; `@Transactional` chỉ ở `application`; cấm Lombok `@Data`/`@Setter` trên `@Entity` |
-| **maven-enforcer** | Java 21, Maven tối thiểu, không trùng dependency |
+| **Spotless** (palantir-java-format) | Format code, thứ tự import, xóa import thừa, line ending LF (file `.java` checkout LF nhờ `.gitattributes`). Kiểm cả `src/main` và `src/test`. Sửa tự động: `./mvnw spotless:apply` |
+| **Checkstyle** (`config/checkstyle/checkstyle.xml`, chỉ `src/main/java`) | Không wildcard import; cấm `@Autowired` trên field, `System.out`, `System.err`, `printStackTrace(`; method ≤ 30 dòng (không đếm dòng trống), file ≤ 300 dòng |
+| **ArchUnit** (`ArchitectureRules` trong `common-test`, mỗi service có `ArchitectureTest`) | Phụ thuộc giữa các tầng theo bảng mục 2 (kể cả ngoại lệ consumer `infrastructure.messaging` và class `*Job` được gọi `application`); `api` không phụ thuộc `infrastructure` (controller không dùng repository); `domain` không phụ thuộc `org.springframework`; `@Transactional` (Spring hoặc Jakarta) chỉ ở `application`; **không field nào** kiểu `double`/`float`/`Double`/`Float` (không phân biệt được field nào là tiền); class `@Entity` không có method public tên bắt đầu bằng `set` (thay cho cấm `@Data`/`@Setter`: annotation Lombok có retention SOURCE nên chỉ kiểm được setter đã sinh) |
+| **maven-enforcer** (phase `validate`) | Java ≥ 21, Maven ≥ 3.9, không khai báo trùng dependency trong cùng một POM (`banDuplicatePomDependencyVersions`) |
 
 Ví dụ một rule ArchUnit:
 ```java

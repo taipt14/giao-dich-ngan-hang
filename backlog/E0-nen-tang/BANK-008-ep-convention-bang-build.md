@@ -4,7 +4,7 @@ epic: E0
 title: Ép convention bằng build: Spotless, Checkstyle, ArchUnit, maven-enforcer
 priority: High
 depends_on: [BANK-001]
-status: TODO
+status: DONE
 ---
 
 # BANK-008: Ép convention bằng build: Spotless, Checkstyle, ArchUnit, maven-enforcer

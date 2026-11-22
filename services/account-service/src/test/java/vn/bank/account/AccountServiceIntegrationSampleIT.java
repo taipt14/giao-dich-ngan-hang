@@ -87,7 +87,8 @@ class AccountServiceIntegrationSampleIT extends AbstractIntegrationTest {
 
         // when
         try (var consumer = createKafkaTestConsumer(SAMPLE_TOPIC)) {
-            var found = consumer.findRecord(consumerRecord -> missingKey.equals(consumerRecord.key()), NO_RECORD_TIMEOUT);
+            var found =
+                    consumer.findRecord(consumerRecord -> missingKey.equals(consumerRecord.key()), NO_RECORD_TIMEOUT);
 
             // then
             assertThat(found).isEmpty();

@@ -20,8 +20,7 @@ class EventEnvelopeJsonTest {
     private static final Instant OCCURRED_AT = Instant.parse("2026-11-21T10:00:00Z");
     private static final BigDecimal AMOUNT = new BigDecimal("1234567.89");
 
-    record SamplePayload(String transferId, BigDecimal amount) {
-    }
+    record SamplePayload(String transferId, BigDecimal amount) {}
 
     @Test
     void should_keepBigDecimalValue_when_serializeThenDeserializeEnvelope() {
@@ -73,16 +72,19 @@ class EventEnvelopeJsonTest {
                 null, "TransferCompleted", OCCURRED_AT, "abc", "transfer-service", new SamplePayload("TRF-1", AMOUNT)));
 
         // then
-        assertThat(thrown)
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("EventEnvelope.eventId is required");
+        assertThat(thrown).isInstanceOf(IllegalArgumentException.class).hasMessage("EventEnvelope.eventId is required");
     }
 
     @Test
     void should_acceptEnvelope_when_traceIdMissing() {
         // given
         var envelope = new EventEnvelope<>(
-                EVENT_ID, "TransferCompleted", OCCURRED_AT, null, "transfer-service", new SamplePayload("TRF-1", AMOUNT));
+                EVENT_ID,
+                "TransferCompleted",
+                OCCURRED_AT,
+                null,
+                "transfer-service",
+                new SamplePayload("TRF-1", AMOUNT));
 
         // when
         var restored = deserialize(serialize(envelope), typeOf(SamplePayload.class));
@@ -109,6 +111,7 @@ class EventEnvelopeJsonTest {
     }
 
     private static Type typeOf(Class<?> payloadType) {
-        return ResolvableType.forClassWithGenerics(EventEnvelope.class, payloadType).getType();
+        return ResolvableType.forClassWithGenerics(EventEnvelope.class, payloadType)
+                .getType();
     }
 }

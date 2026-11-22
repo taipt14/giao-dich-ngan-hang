@@ -14,8 +14,7 @@ final class SharedContainerFingerprints {
 
     private static final AtomicReference<List<String>> FIRST_SEEN = new AtomicReference<>();
 
-    private SharedContainerFingerprints() {
-    }
+    private SharedContainerFingerprints() {}
 
     /** Tra ve dau van tay ghi lan dau trong JVM (ghi {@code current} neu chua co). */
     static List<String> firstSeenOrRecord(List<String> current) {
@@ -24,12 +23,15 @@ final class SharedContainerFingerprints {
     }
 
     static List<String> fingerprintsOf(GenericContainer<?>... containers) {
-        return Arrays.stream(containers).map(SharedContainerFingerprints::fingerprintOf).toList();
+        return Arrays.stream(containers)
+                .map(SharedContainerFingerprints::fingerprintOf)
+                .toList();
     }
 
     private static String fingerprintOf(GenericContainer<?> container) {
         // Doc lai tu Docker thay vi cache cua Testcontainers de thay duoc lan restart neu co
-        var startedAt = container.getDockerClient()
+        var startedAt = container
+                .getDockerClient()
                 .inspectContainerCmd(container.getContainerId())
                 .exec()
                 .getState()
