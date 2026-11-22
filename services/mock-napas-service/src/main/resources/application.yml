@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: mock-napas-service
+
+server:
+  port: 8085

@@ -4,7 +4,7 @@ epic: E0
 title: Khởi tạo Maven multi-module và parent POM
 priority: High
 depends_on: []
-status: TODO
+status: REVIEW
 ---
 
 # BANK-001: Khởi tạo Maven multi-module và parent POM
