@@ -18,12 +18,13 @@ Message lỗi không được làm tắc cả partition, nhưng cũng không đ�
 
 ## Yêu cầu chi tiết
 1. `DefaultErrorHandler` retry 3 lần, backoff 1s, 2s, 4s
-2. Hết retry → `DeadLetterPublishingRecoverer` gửi sang `<topic>.DLQ` kèm header lý do lỗi
+2. Hết retry → `DeadLetterPublishingRecoverer` gửi sang `<topic>.DLQ` kèm header lý do lỗi. Tên topic DLQ phải lấy từ `Topics.toDlq(topic)` của `common-events` (truyền destination resolver), vì mặc định Spring Kafka dùng hậu tố `-dlt`, khác quy ước `.DLQ` ở mục 5 `kien-truc.md`
 3. Lỗi không thể retry (deserialize, validate) → vào DLQ ngay
 4. API ADMIN: `GET /internal/dlq/{topic}` xem message, `POST /internal/dlq/{topic}/replay` gửi lại topic gốc
 
 ## Acceptance criteria
 - [ ] Message lỗi → sau 3 lần vào DLQ, message tiếp theo trong partition vẫn được xử lý
+- [ ] Message lỗi từ `transfer.events` → nằm ở topic `transfer.events.DLQ` (không phải `transfer.events-dlt`)
 - [ ] Replay sau khi sửa lỗi → xử lý thành công, không trùng (nhờ BANK-061)
 
 ## Ngoài phạm vi

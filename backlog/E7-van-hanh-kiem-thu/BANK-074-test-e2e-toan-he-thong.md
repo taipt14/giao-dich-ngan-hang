@@ -3,7 +3,7 @@ id: BANK-074
 epic: E7
 title: Test end-to-end toàn hệ thống
 priority: Medium
-depends_on: [BANK-054, BANK-062]
+depends_on: [BANK-054, BANK-062, BANK-076]
 status: TODO
 ---
 
@@ -30,6 +30,7 @@ Kiểm tra các luồng chính chạy đúng khi tất cả service cùng hoạt
 ## Phụ thuộc
 - [BANK-054: Timeout và tra soát giao dịch treo](../E5-lien-ngan-hang/BANK-054-timeout-tra-soat.md)
 - [BANK-062: Retry, DLQ và replay message lỗi](../E6-notification/BANK-062-retry-dlq-replay.md)
+- [BANK-076: Đóng gói service thành Docker image và chạy bằng profile docker](BANK-076-docker-image-va-profile.md)
 
 ## Tài liệu tham khảo
 - [Kiến trúc](../../docs/kien-truc.md)
