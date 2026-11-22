@@ -39,4 +39,5 @@ Khách hàng xem danh sách tài khoản và số dư của mình. Đây là API
 Cache chỉ phục vụ hiển thị. Mọi kiểm tra số dư khi trừ tiền phải đọc từ DB có khóa.
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

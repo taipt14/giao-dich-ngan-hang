@@ -32,4 +32,5 @@ Theo dõi sức khỏe hệ thống và số liệu nghiệp vụ.
 - [BANK-070: Tracing phân tán qua REST và Kafka](BANK-070-distributed-tracing.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

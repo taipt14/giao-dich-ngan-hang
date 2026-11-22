@@ -32,4 +32,5 @@ Khi một giao dịch lỗi cần lần theo được toàn bộ hành trình qu
 - [BANK-046: Outbox pattern cho event nghiệp vụ](../E4-chuyen-khoan-noi-bo/BANK-046-outbox-pattern.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

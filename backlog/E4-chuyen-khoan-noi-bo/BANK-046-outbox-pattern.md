@@ -37,4 +37,5 @@ Nếu lưu DB thành công nhưng gửi Kafka thất bại (hoặc ngược lạ
 - [BANK-045: Thực hiện chuyển khoản nội bộ](BANK-045-thuc-hien-chuyen-khoan-noi-bo.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

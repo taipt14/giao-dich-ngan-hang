@@ -39,4 +39,5 @@ Sau khi xác thực OTP, trừ tiền tài khoản nguồn, cộng tiền tài k
 - [BANK-044: Tính phí giao dịch](BANK-044-tinh-phi-giao-dich.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

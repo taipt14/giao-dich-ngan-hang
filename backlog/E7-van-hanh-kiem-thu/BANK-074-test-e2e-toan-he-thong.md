@@ -32,4 +32,5 @@ Kiểm tra các luồng chính chạy đúng khi tất cả service cùng hoạt
 - [BANK-062: Retry, DLQ và replay message lỗi](../E6-notification/BANK-062-retry-dlq-replay.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

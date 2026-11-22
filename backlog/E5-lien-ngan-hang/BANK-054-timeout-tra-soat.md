@@ -37,4 +37,5 @@ NAPAS có thể không trả lời. Không được tự ý hoàn tiền khi ch�
 Đây là task quan trọng nhất về mặt nghiệp vụ. Nếu thiết kế có điểm nào chưa rõ, agent phải hỏi lại trước khi code.
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

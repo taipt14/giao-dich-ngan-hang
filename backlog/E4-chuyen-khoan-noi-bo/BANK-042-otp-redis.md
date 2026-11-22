@@ -38,4 +38,5 @@ Lệnh chuyển khoản cần OTP. OTP có hiệu lực 3 phút, nhập sai quá
 - [BANK-041: API khởi tạo chuyển khoản với Idempotency-Key](BANK-041-api-khoi-tao-chuyen-khoan-idempotency.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

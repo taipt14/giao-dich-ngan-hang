@@ -4,7 +4,8 @@ Project mô phỏng nghiệp vụ chuyển khoản ngân hàng: Java 21, Spring 
 
 ## Tài liệu
 
-- [Kiến trúc và quy ước bắt buộc](docs/kien-truc.md): context chính cho AI agent
+- [Kiến trúc](docs/kien-truc.md): context chính cho AI agent
+- [Convention viết code](docs/convention-code.md): quy ước bắt buộc khi code
 - [Mẫu task](docs/mau-task.md)
 - [Quy tắc viết task cho AI](docs/quy-tac-viet-task.md)
 

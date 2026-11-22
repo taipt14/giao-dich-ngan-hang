@@ -34,4 +34,5 @@ Hệ thống có 2 loại người dùng: khách hàng (CUSTOMER) và nhân viê
 - [BANK-002: docker-compose hạ tầng: Oracle, Kafka, Redis](../E0-nen-tang/BANK-002-docker-compose-ha-tang.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

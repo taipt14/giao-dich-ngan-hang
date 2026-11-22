@@ -37,4 +37,5 @@ Mỗi khách hàng có hạn mức: tối đa 100 triệu/lần và 500 triệu/
 - [BANK-041: API khởi tạo chuyển khoản với Idempotency-Key](BANK-041-api-khoi-tao-chuyen-khoan-idempotency.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

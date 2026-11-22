@@ -34,4 +34,5 @@ NAPAS trả thành công → hoàn tất. Trả thất bại → hoàn lại to�
 - [BANK-052: Saga chuyển liên ngân hàng: trừ tiền và gửi NAPAS](BANK-052-saga-chuyen-lien-ngan-hang.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

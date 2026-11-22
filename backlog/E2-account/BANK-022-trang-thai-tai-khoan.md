@@ -36,4 +36,5 @@ Tài khoản có các trạng thái: ACTIVE, LOCKED (tạm khóa), CLOSED (đã 
 - [BANK-020: account-service: mở tài khoản thanh toán](BANK-020-mo-tai-khoan-thanh-toan.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

@@ -32,4 +32,5 @@ Integration test cần Oracle, Kafka, Redis thật nhưng không muốn mỗi se
 - [BANK-003: Cấu hình datasource Oracle và Flyway cho các service](BANK-003-flyway-ket-noi-oracle.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

@@ -32,4 +32,5 @@ Vận hành thay đổi ngưỡng rule mà không cần deploy lại. Cảnh bá
 - [BANK-022: Khóa, mở khóa và đóng tài khoản](../E2-account/BANK-022-trang-thai-tai-khoan.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

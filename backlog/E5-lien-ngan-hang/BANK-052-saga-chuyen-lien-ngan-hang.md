@@ -36,4 +36,5 @@ Chuyển liên ngân hàng gồm nhiều bước ở nhiều hệ thống nên k
 - [BANK-050: mock-napas-service: giả lập ngân hàng đối tác](BANK-050-mock-napas-service.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

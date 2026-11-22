@@ -33,4 +33,5 @@ Mỗi service cần kết nối schema riêng và quản lý thay đổi DB bằ
 - [BANK-002: docker-compose hạ tầng: Oracle, Kafka, Redis](BANK-002-docker-compose-ha-tang.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

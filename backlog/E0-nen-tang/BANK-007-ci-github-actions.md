@@ -31,4 +31,5 @@ Mỗi lần push cần tự động kiểm tra build và test.
 - [BANK-006: common-test: base class Testcontainers dùng chung](BANK-006-common-test-testcontainers.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

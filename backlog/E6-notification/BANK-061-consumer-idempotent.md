@@ -34,4 +34,5 @@ Kafka đảm bảo at-least-once nên một event có thể đến nhiều lần
 - [BANK-060: Thông báo biến động số dư](BANK-060-thong-bao-bien-dong-so-du.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

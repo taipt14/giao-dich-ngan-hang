@@ -37,4 +37,5 @@ Khách hàng xem thông tin của chính mình. ADMIN có thể cập nhật th�
 - [BANK-013: customer-service: đăng ký khách hàng (CIF)](BANK-013-dang-ky-khach-hang.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

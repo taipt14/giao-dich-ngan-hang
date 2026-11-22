@@ -37,4 +37,5 @@ Nhiều giao dịch có thể cùng trừ tiền một tài khoản cùng lúc. 
 Giải thích trong PR vì sao chọn pessimistic lock thay vì optimistic lock cho trường hợp này.
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

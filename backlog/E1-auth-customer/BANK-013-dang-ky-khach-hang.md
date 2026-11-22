@@ -42,4 +42,5 @@ Nhân viên (ADMIN) tạo hồ sơ khách hàng. Mỗi khách hàng có một m�
 - [BANK-005: common-events: event envelope và cấu hình Kafka dùng chung](../E0-nen-tang/BANK-005-common-events-envelope.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

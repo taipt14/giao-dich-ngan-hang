@@ -34,4 +34,5 @@ Mỗi lệnh chuyển khoản đi qua các trạng thái: INITIATED → OTP_PEND
 - [BANK-004: common-core: định dạng lỗi chuẩn và mã lỗi](../E0-nen-tang/BANK-004-common-core-xu-ly-loi.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

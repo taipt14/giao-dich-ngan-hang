@@ -32,4 +32,5 @@ Phát hiện mẫu hành vi sau giao dịch, ví dụ một tài khoản nhận 
 - [BANK-080: fraud-service: kiểm tra tần suất giao dịch (đồng bộ)](BANK-080-fraud-velocity-check.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

@@ -17,8 +17,8 @@ Mọi service phải trả lỗi cùng một format để client và gateway x�
 
 ## Yêu cầu chi tiết
 1. Record `ErrorResponse(code, message, traceId, timestamp, details)`
-2. Class `BusinessException(ErrorCode code, String message)`
-3. Interface `ErrorCode` có `code()` và `httpStatus()`; mỗi service tự định nghĩa enum mã lỗi riêng
+2. Class `BusinessException(ErrorCode code, String message)` cho lỗi nghiệp vụ và `TechnicalException(ErrorCode code, String message, Throwable cause)` cho lỗi kỹ thuật
+3. Interface `ErrorCode` có `code()` và `int httpStatus()` (không phụ thuộc Spring); mỗi service tự định nghĩa enum mã lỗi riêng
 4. `GlobalExceptionHandler` (auto-configuration) xử lý: `BusinessException`, lỗi validate (400), lỗi không xác định (500, không lộ stacktrace)
 5. Lấy `traceId` từ MDC nếu có
 
@@ -33,4 +33,5 @@ Mọi service phải trả lỗi cùng một format để client và gateway x�
 - [BANK-001: Khởi tạo Maven multi-module và parent POM](BANK-001-khoi-tao-maven-multi-module.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

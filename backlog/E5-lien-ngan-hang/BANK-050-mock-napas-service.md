@@ -35,4 +35,5 @@ Giả lập NAPAS và các ngân hàng khác để test luồng liên ngân hàn
 - [BANK-003: Cấu hình datasource Oracle và Flyway cho các service](../E0-nen-tang/BANK-003-flyway-ket-noi-oracle.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

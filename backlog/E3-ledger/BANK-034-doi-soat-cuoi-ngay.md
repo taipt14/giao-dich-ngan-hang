@@ -35,4 +35,5 @@ Cuối mỗi ngày kiểm tra: (1) mọi journal đều cân Nợ = Có; (2) s�
 - [BANK-031: API posting nội bộ: ghi bút toán và cập nhật số dư](BANK-031-api-posting-noi-bo.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

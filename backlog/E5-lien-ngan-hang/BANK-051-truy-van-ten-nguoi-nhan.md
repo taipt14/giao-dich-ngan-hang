@@ -33,4 +33,5 @@ Trước khi chuyển liên ngân hàng, app hiển thị tên chủ tài khoả
 - [BANK-055: Resilience4j cho các lời gọi REST giữa service](BANK-055-resilience4j.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

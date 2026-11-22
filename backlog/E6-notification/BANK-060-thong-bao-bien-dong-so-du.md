@@ -34,4 +34,5 @@ Mỗi khi số dư thay đổi, khách hàng nhận thông báo: `TK 1000****567
 - [BANK-046: Outbox pattern cho event nghiệp vụ](../E4-chuyen-khoan-noi-bo/BANK-046-outbox-pattern.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

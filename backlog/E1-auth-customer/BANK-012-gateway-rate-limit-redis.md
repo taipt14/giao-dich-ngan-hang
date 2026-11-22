@@ -31,4 +31,5 @@ Chống spam API, đặc biệt API chuyển khoản.
 - [BANK-011: API Gateway: routing và xác thực JWT](BANK-011-api-gateway-routing-jwt.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

@@ -36,4 +36,5 @@ Mọi thay đổi số dư phải được ghi bằng bút toán kép: mỗi gia
 - [BANK-020: account-service: mở tài khoản thanh toán](../E2-account/BANK-020-mo-tai-khoan-thanh-toan.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

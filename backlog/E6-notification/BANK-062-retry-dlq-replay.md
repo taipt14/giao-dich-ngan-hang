@@ -33,4 +33,5 @@ Message lỗi không được làm tắc cả partition, nhưng cũng không đ�
 - [BANK-061: Consumer idempotent dùng chung](BANK-061-consumer-idempotent.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

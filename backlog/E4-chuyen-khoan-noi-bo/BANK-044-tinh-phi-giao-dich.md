@@ -34,4 +34,5 @@ Chuyển nội bộ miễn phí. Chuyển liên ngân hàng: dưới 500.000 ph�
 - [BANK-040: transfer-service: bảng TRANSFER và máy trạng thái](BANK-040-bang-transfer-state-machine.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

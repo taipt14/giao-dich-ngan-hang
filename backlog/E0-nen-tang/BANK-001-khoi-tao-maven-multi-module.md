@@ -35,4 +35,5 @@ Chưa có code. Cần dựng khung repo để các task sau thêm service vào.
 - Không có
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

@@ -32,4 +32,5 @@ Chứng minh hệ thống đúng về tiền khi có tải cao.
 - [BANK-045: Thực hiện chuyển khoản nội bộ](../E4-chuyen-khoan-noi-bo/BANK-045-thuc-hien-chuyen-khoan-noi-bo.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

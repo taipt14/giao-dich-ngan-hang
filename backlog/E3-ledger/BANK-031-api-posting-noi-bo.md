@@ -37,4 +37,5 @@ status: TODO
 - [BANK-030: Thiết kế bảng sổ cái và tài khoản nội bộ (GL)](BANK-030-thiet-ke-bang-ledger.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

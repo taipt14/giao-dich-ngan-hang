@@ -33,4 +33,5 @@ Nhân viên nạp tiền mặt vào tài khoản khách hàng. Bút toán: Nợ 
 - [BANK-031: API posting nội bộ: ghi bút toán và cập nhật số dư](../E3-ledger/BANK-031-api-posting-noi-bo.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

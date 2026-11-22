@@ -34,4 +34,5 @@ Client chỉ gọi vào một điểm duy nhất; mọi request phải được 
 - [BANK-010: Keycloak: realm, client và role](BANK-010-keycloak-realm.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

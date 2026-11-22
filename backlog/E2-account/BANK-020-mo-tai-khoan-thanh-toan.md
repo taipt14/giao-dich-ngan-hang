@@ -39,4 +39,5 @@ Khách hàng ACTIVE được mở tối đa 3 tài khoản thanh toán VND. Số
 - [BANK-014: customer-service: tra cứu, cập nhật và đổi trạng thái khách hàng](../E1-auth-customer/BANK-014-tra-cuu-cap-nhat-khach-hang.md)
 
 ## Tài liệu tham khảo
-- [Kiến trúc và quy ước](../../docs/kien-truc.md)
+- [Kiến trúc](../../docs/kien-truc.md)
+- [Convention viết code](../../docs/convention-code.md)

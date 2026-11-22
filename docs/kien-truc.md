@@ -114,42 +114,10 @@ Key của message = id của aggregate (ví dụ `transferId`, `accountNo`) đ�
 | `lock:account:{accountNo}` | Distributed lock (nếu cần) | 10 giây |
 | `fraud:velocity:{accountNo}` | Sorted set đếm giao dịch theo thời gian | 1 giờ |
 
-## 7. Quy ước bắt buộc (agent phải tuân thủ)
+## 7. Quy ước viết code
 
-### Tiền tệ
-- Luôn dùng `BigDecimal`, **không bao giờ** dùng `double`/`float`.
-- Cột Oracle: `NUMBER(19,2)`. Đơn vị: VND.
-- Làm tròn: `RoundingMode.HALF_UP`.
-
-### Database
-- Mỗi service chỉ truy cập schema của chính nó. Không join chéo schema, không DB link.
-- Migration bằng Flyway: `V{số}__{mo_ta}.sql`. Không sửa migration đã chạy.
-- Bảng `LEDGER_ENTRY` **chỉ được INSERT**, không UPDATE/DELETE.
-- Khóa chính dùng `RAW(16)` (UUID) hoặc sequence tùy bảng; số tài khoản là `VARCHAR2(20)`.
-- Mọi bảng nghiệp vụ có `CREATED_AT`, `UPDATED_AT`, `VERSION` (optimistic lock).
-
-### Kafka
-- Mọi consumer phải **idempotent** (kiểm tra `eventId` trong bảng `PROCESSED_MESSAGE`).
-- Producer nghiệp vụ dùng **Outbox pattern**, không gửi Kafka trực tiếp trong transaction DB.
-- Consumer lỗi: retry 3 lần (backoff), sau đó đẩy vào `<topic>.DLQ`.
-
-### API
-- REST, JSON, prefix `/api/v1/...`.
-- Lỗi trả theo format chung:
-  ```json
-  { "code": "INSUFFICIENT_BALANCE", "message": "...", "traceId": "...", "timestamp": "..." }
-  ```
-- API tạo giao dịch bắt buộc header `Idempotency-Key`.
-
-### Code
-- Không dùng `@Autowired` field injection, dùng constructor injection.
-- DTO dùng Java `record`.
-- Không log thông tin nhạy cảm: OTP, số CCCD đầy đủ, token.
-
-### Test
-- Unit test cho logic nghiệp vụ trong `domain/` và `application/`.
-- Integration test dùng Testcontainers (Oracle, Kafka, Redis thật), không dùng H2.
-- Logic liên quan đến tiền phải có test cho trường hợp chạy đồng thời.
+Toàn bộ quy ước viết code (tiền tệ, DB, Kafka, API, logging, test, git...) nằm trong
+[convention-code.md](convention-code.md). Agent **bắt buộc** đọc file đó trước khi code.
 
 ## 8. Lệnh thường dùng
 
