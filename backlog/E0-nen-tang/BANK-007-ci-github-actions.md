@@ -4,7 +4,7 @@ epic: E0
 title: CI: GitHub Actions build và test
 priority: Low
 depends_on: [BANK-006]
-status: TODO
+status: BLOCKED
 ---
 
 # BANK-007: CI: GitHub Actions build và test
