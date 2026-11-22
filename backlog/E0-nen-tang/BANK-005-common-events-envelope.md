@@ -4,7 +4,7 @@ epic: E0
 title: common-events: event envelope và cấu hình Kafka dùng chung
 priority: High
 depends_on: [BANK-001]
-status: TODO
+status: DONE
 ---
 
 # BANK-005: common-events: event envelope và cấu hình Kafka dùng chung

@@ -4,7 +4,7 @@ epic: E0
 title: Cấu hình datasource Oracle và Flyway cho các service
 priority: High
 depends_on: [BANK-002]
-status: TODO
+status: DONE
 ---
 
 # BANK-003: Cấu hình datasource Oracle và Flyway cho các service

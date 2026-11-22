@@ -4,7 +4,7 @@ epic: E0
 title: common-core: định dạng lỗi chuẩn và mã lỗi
 priority: High
 depends_on: [BANK-001]
-status: TODO
+status: DONE
 ---
 
 # BANK-004: common-core: định dạng lỗi chuẩn và mã lỗi

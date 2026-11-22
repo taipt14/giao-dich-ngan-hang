@@ -1,0 +1,12 @@
+-- Bang dung chung cho consumer Kafka idempotent: moi (EVENT_ID, CONSUMER) chi xu ly mot lan
+CREATE TABLE PROCESSED_MESSAGE (
+    EVENT_ID     VARCHAR2(36)  NOT NULL,
+    CONSUMER     VARCHAR2(100) NOT NULL,
+    PROCESSED_AT TIMESTAMP     NOT NULL,
+    CONSTRAINT PK_PROCESSED_MESSAGE PRIMARY KEY (EVENT_ID, CONSUMER)
+);
+
+COMMENT ON TABLE PROCESSED_MESSAGE IS 'Message Kafka da xu ly, dung de chong xu ly trung (consumer idempotent)';
+COMMENT ON COLUMN PROCESSED_MESSAGE.EVENT_ID IS 'eventId (UUID) trong EventEnvelope';
+COMMENT ON COLUMN PROCESSED_MESSAGE.CONSUMER IS 'Ten consumer da xu ly message';
+COMMENT ON COLUMN PROCESSED_MESSAGE.PROCESSED_AT IS 'Thoi diem xu ly xong (UTC)';

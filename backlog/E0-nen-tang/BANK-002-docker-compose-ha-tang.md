@@ -4,7 +4,7 @@ epic: E0
 title: docker-compose hạ tầng: Oracle, Kafka, Redis
 priority: High
 depends_on: [BANK-001]
-status: TODO
+status: DONE
 ---
 
 # BANK-002: docker-compose hạ tầng: Oracle, Kafka, Redis
