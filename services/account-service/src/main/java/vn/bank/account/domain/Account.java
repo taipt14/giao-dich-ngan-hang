@@ -29,6 +29,7 @@ public class Account {
     @Column(name = "ACCOUNT_NO")
     private String accountNo;
 
+    // NULL voi tai khoan GL (CK_ACCOUNT_CIF)
     @Column(name = "CIF")
     private String cif;
 
@@ -76,11 +77,17 @@ public class Account {
     }
 
     /**
-     * Mo tai khoan VND moi o trang thai ACTIVE, so du 0. Chu tai khoan phai ACTIVE va dang co it hon
+     * Mo tai khoan VND moi o trang thai ACTIVE, so du 0. Chi mo duoc loai tai khoan khach hang: tai khoan GL tao san
+     * bang migration → {@code ACCOUNT_TYPE_NOT_ALLOWED}. Chu tai khoan phai ACTIVE va dang co it hon
      * {@link #MAX_CURRENT_ACCOUNTS_PER_CUSTOMER} tai khoan thanh toan ({@code existingAccounts}).
      */
     public static Account open(
             String accountNo, AccountHolder holder, AccountType accountType, long existingAccounts, Clock clock) {
+        if (!accountType.isCustomerAccount()) {
+            throw new BusinessException(
+                    AccountErrorCode.ACCOUNT_TYPE_NOT_ALLOWED,
+                    "Account type " + accountType + " cannot be opened for a customer");
+        }
         if (!holder.isActive()) {
             throw new BusinessException(
                     AccountErrorCode.CUSTOMER_NOT_ACTIVE,

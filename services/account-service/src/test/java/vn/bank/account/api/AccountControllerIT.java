@@ -232,6 +232,21 @@ class AccountControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void should_return422AccountTypeNotAllowed_when_adminOpensGlAccount() {
+        // given
+        var cif = givenCustomer("ACTIVE");
+        var body = """
+                {"cif":"%s","accountType":"GL"}""".formatted(cif);
+
+        // when
+        var response = post(body, "ADMIN", ErrorResponse.class);
+
+        // then
+        assertError(response, HttpStatus.UNPROCESSABLE_CONTENT, "ACCOUNT_TYPE_NOT_ALLOWED");
+        assertThat(countAccountsOf(cif)).isZero();
+    }
+
+    @Test
     void should_return400_when_accountTypeNotSupported() {
         // given
         var body = """

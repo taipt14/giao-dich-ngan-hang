@@ -9,7 +9,8 @@ import java.math.BigDecimal;
 public record AccountBalance(
         String accountNo, String cif, String currency, BigDecimal balance, BigDecimal availableBalance) {
 
+    /** Tai khoan GL khong co CIF nen khong thuoc khach hang nao. */
     public boolean isOwnedBy(String customerCif) {
-        return cif.equals(customerCif);
+        return cif != null && cif.equals(customerCif);
     }
 }
