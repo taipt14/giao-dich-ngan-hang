@@ -26,8 +26,23 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+        type:
+          # Instant luu vao cot TIMESTAMP (gia tri UTC), khong dung TIMESTAMP WITH TIME ZONE
+          preferred_instant_jdbc_type: TIMESTAMP
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   flyway:
     locations: classpath:db/migration
+  http:
+    clients:
+      # Goi service khac khong duoc treo request lau: loi ket noi/timeout tra 503 cho client retry
+      connect-timeout: 2s
+      read-timeout: 5s
 
 server:
   port: 8082
+
+bank:
+  account:
+    customer-service:
+      base-url: ${CUSTOMER_SERVICE_URL:http://localhost:8081}

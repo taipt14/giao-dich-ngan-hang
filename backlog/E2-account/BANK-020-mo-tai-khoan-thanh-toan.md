@@ -4,7 +4,7 @@ epic: E2
 title: account-service: mở tài khoản thanh toán
 priority: High
 depends_on: [BANK-014]
-status: TODO
+status: DONE
 ---
 
 # BANK-020: account-service: mở tài khoản thanh toán
