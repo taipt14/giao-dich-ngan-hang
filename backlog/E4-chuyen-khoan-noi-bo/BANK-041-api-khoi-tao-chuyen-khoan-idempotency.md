@@ -4,7 +4,7 @@ epic: E4
 title: API khởi tạo chuyển khoản với Idempotency-Key
 priority: High
 depends_on: [BANK-040]
-status: TODO
+status: DONE
 ---
 
 # BANK-041: API khởi tạo chuyển khoản với Idempotency-Key

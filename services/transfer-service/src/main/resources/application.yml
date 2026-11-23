@@ -31,6 +31,26 @@ spring:
           preferred_instant_jdbc_type: TIMESTAMP
   flyway:
     locations: classpath:db/migration
+  data:
+    redis:
+      # Lop idempotency thu nhat (BANK-041); Redis loi o luong bat buoc nay tra 503 (muc 12 convention)
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      connect-timeout: 500ms
+      timeout: 500ms
+  http:
+    clients:
+      # Goi service khac khong duoc treo request lau: loi ket noi/timeout tra 503 cho client retry
+      connect-timeout: 2s
+      read-timeout: 5s
 
 server:
   port: 8084
+
+bank:
+  transfer:
+    account-service:
+      base-url: ${ACCOUNT_SERVICE_URL:http://localhost:8082}
+    idempotency:
+      # Muc 6 kien-truc.md: key idem:{clientId}:{idempotencyKey} song 24h
+      ttl: 24h

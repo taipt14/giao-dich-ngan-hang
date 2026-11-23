@@ -110,10 +110,17 @@ public class Transfer {
         statusHistory.add(TransferStatusHistory.of(null, TransferStatus.INITIATED, null, now));
     }
 
-    /** Tao lenh o trang thai INITIATED. So tien phai duong ({@code INVALID_AMOUNT}), phi khong am. */
+    /**
+     * Tao lenh o trang thai INITIATED. So tien phai duong ({@code INVALID_AMOUNT}), phi khong am; lenh noi bo khong duoc
+     * chuyen cho chinh tai khoan nguon ({@code SAME_ACCOUNT_TRANSFER}).
+     */
     public static Transfer initiate(String transferId, NewTransfer request, Clock clock) {
         if (request.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException(TransferErrorCode.INVALID_AMOUNT, "Amount must be positive");
+        }
+        if (request.isSameAccountTransfer()) {
+            throw new BusinessException(
+                    TransferErrorCode.SAME_ACCOUNT_TRANSFER, "Cannot transfer to the source account itself");
         }
         if (request.fee().compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Fee must not be negative");
