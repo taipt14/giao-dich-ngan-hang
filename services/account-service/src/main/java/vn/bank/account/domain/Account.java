@@ -95,6 +95,31 @@ public class Account {
         return new Account(accountNo, holder.cif(), accountType, clock.instant());
     }
 
+    /**
+     * Doi trang thai theo {@link AccountStatus#canTransitionTo}; chuyen khong hop le (ke ca giu nguyen trang thai) →
+     * {@code INVALID_STATUS_TRANSITION}. Dong tai khoan con so du → {@code ACCOUNT_BALANCE_NOT_ZERO}.
+     */
+    public AccountStatusChange changeStatus(AccountStatus target, String reason, Clock clock) {
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("Reason is required to change account status");
+        }
+        if (!status.canTransitionTo(target)) {
+            throw new BusinessException(
+                    AccountErrorCode.INVALID_STATUS_TRANSITION,
+                    "Account " + getMaskedAccountNo() + " cannot change from " + status + " to " + target);
+        }
+        if (target == AccountStatus.CLOSED && balance.compareTo(BigDecimal.ZERO) != 0) {
+            throw new BusinessException(
+                    AccountErrorCode.ACCOUNT_BALANCE_NOT_ZERO,
+                    "Account " + getMaskedAccountNo() + " still has balance, cannot be closed");
+        }
+        var previousStatus = status;
+        var now = clock.instant();
+        this.status = target;
+        this.updatedAt = now;
+        return new AccountStatusChange(accountNo, cif, previousStatus, target, reason, now);
+    }
+
     public AccountBalance toBalance() {
         return new AccountBalance(accountNo, cif, currency, balance, availableBalance);
     }
