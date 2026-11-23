@@ -13,13 +13,14 @@ import java.util.concurrent.Executors;
 
 /**
  * account-service gia (JDK HttpServer) cho {@code GET /internal/accounts/{accountNo}}: tai khoan da khai bao tra 200
- * kem CIF va trang thai, con lai tra 404 {@code ACCOUNT_NOT_FOUND} giong account-service that.
+ * kem CIF, trang thai va so du kha dung, con lai tra 404 {@code ACCOUNT_NOT_FOUND} giong account-service that.
  */
 public final class FakeAccountService implements AutoCloseable {
 
     private static final String ACCOUNTS_PATH = "/internal/accounts/";
     private static final int OK = 200;
     private static final int NOT_FOUND = 404;
+    private static final String DEFAULT_BALANCE = "1000000000.00";
 
     private final HttpServer server;
     private final ExecutorService executor;
@@ -49,13 +50,21 @@ public final class FakeAccountService implements AutoCloseable {
         return "http://localhost:" + server.getAddress().getPort();
     }
 
-    /** {@code cif} null: tai khoan GL cua ngan hang. */
+    /**
+     * {@code cif} null: tai khoan GL cua ngan hang. So du kha dung mac dinh du lon cho moi lenh trong han muc ngay (500
+     * trieu) cong phi.
+     */
     public void givenAccount(String accountNo, String cif, String status) {
+        givenAccount(accountNo, cif, status, DEFAULT_BALANCE);
+    }
+
+    public void givenAccount(String accountNo, String cif, String status, String availableBalance) {
         var cifJson = cif == null ? "null" : "\"" + cif + "\"";
         var accountType = cif == null ? "GL" : "CURRENT";
-        bodyByAccountNo.put(accountNo, """
-                {"accountNo":"%s","cif":%s,"accountType":"%s","currency":"VND","balance":1000000.00,
-                 "availableBalance":1000000.00,"status":"%s","createdAt":"2026-11-23T03:00:00Z"}""".formatted(accountNo, cifJson, accountType, status));
+        bodyByAccountNo.put(
+                accountNo, """
+                {"accountNo":"%s","cif":%s,"accountType":"%s","currency":"VND","balance":%s,
+                 "availableBalance":%s,"status":"%s","createdAt":"2026-11-23T03:00:00Z"}""".formatted(accountNo, cifJson, accountType, availableBalance, availableBalance, status));
     }
 
     @Override

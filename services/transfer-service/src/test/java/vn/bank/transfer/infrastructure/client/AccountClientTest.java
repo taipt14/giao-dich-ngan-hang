@@ -8,6 +8,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
@@ -32,7 +33,7 @@ class AccountClientTest {
             new AccountClient(builder, new AccountServiceProperties(URI.create(BASE_URL)));
 
     @Test
-    void should_returnOwnerAndStatus_when_accountFound() {
+    void should_returnOwnerStatusAndAvailableBalance_when_accountFound() {
         // given: response day du cua account-service, cac truong khong dung bi bo qua
         server.expect(requestTo(ACCOUNT_URL))
                 .andExpect(method(HttpMethod.GET))
@@ -45,7 +46,8 @@ class AccountClientTest {
         var account = accountClient.findAccount(ACCOUNT_NO);
 
         // then
-        assertThat(account).contains(new AccountSnapshot(ACCOUNT_NO, "C000000001", "LOCKED"));
+        assertThat(account)
+                .contains(new AccountSnapshot(ACCOUNT_NO, "C000000001", "LOCKED", new BigDecimal("150000.00")));
         server.verify();
     }
 

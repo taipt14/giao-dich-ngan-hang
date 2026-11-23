@@ -4,7 +4,7 @@ epic: E4
 title: Tính phí giao dịch
 priority: Medium
 depends_on: [BANK-040]
-status: TODO
+status: DONE
 ---
 
 # BANK-044: Tính phí giao dịch

@@ -35,7 +35,7 @@ public class CreateTransferService {
     private final IdempotencyStore idempotencyStore;
     private final AccountClient accountClient;
     private final TransferRepository transferRepository;
-    private final TransferFeeEstimator transferFeeEstimator;
+    private final TransferFeeService transferFeeService;
     private final TransferLimitService transferLimitService;
     private final OtpGenerator otpGenerator;
     private final OtpStore otpStore;
@@ -45,12 +45,13 @@ public class CreateTransferService {
     /**
      * Lenh noi bo cho chinh tai khoan nguon → {@code SAME_ACCOUNT_TRANSFER}; tai khoan nguon khong thuoc {@code cif} →
      * {@code SOURCE_ACCOUNT_ACCESS_DENIED}; tai khoan dich noi bo khong ton tai / khong ACTIVE →
-     * {@code DEST_ACCOUNT_NOT_FOUND} / {@code DEST_ACCOUNT_NOT_ACTIVE}; request cung key dang xu ly →
+     * {@code DEST_ACCOUNT_NOT_FOUND} / {@code DEST_ACCOUNT_NOT_ACTIVE}; so du kha dung cua tai khoan nguon nho hon so
+     * tien cong phi → {@code INSUFFICIENT_BALANCE}; request cung key dang xu ly →
      * {@code IDEMPOTENCY_KEY_IN_PROGRESS}; vuot han muc moi lenh / han muc ngay →
      * {@code PER_TRANSACTION_LIMIT_EXCEEDED} / {@code DAILY_LIMIT_EXCEEDED} (chi kiem tra, giu cho luc xac thuc OTP).
      */
     public CreateTransferResult create(CreateTransferCommand command) {
-        var fee = transferFeeEstimator.estimate(TransferType.of(command.destBankCode()), command.amount());
+        var fee = transferFeeService.calculateFee(TransferType.of(command.destBankCode()), command.amount());
         var request = command.toNewTransfer(fee);
         // Kiem tra quy tac cua lenh truoc khi giu key: request sai khong chiem Idempotency-Key
         var transfer = Transfer.initiate(UUID.randomUUID().toString(), request, clock);
@@ -121,12 +122,14 @@ public class CreateTransferService {
     }
 
     private void requireAccounts(NewTransfer request) {
-        accountClient
+        var source = accountClient
                 .findAccount(request.sourceAccount())
                 .orElseThrow(() -> new BusinessException(
                         TransferErrorCode.SOURCE_ACCOUNT_ACCESS_DENIED,
-                        "Source account not found: " + AccountNumberMasker.mask(request.sourceAccount())))
-                .requireOwnedBy(request.cif());
+                        "Source account not found: " + AccountNumberMasker.mask(request.sourceAccount())));
+        // Kiem tra chu so huu truoc: khong lo so du cua tai khoan nguoi khac qua ma loi
+        source.requireOwnedBy(request.cif());
+        source.requireAvailableBalanceFor(request.amount(), request.fee());
         // Tai khoan dich lien ngan hang nam o ngan hang khac, khong tra duoc qua account-service
         if (request.type() == TransferType.INTERNAL) {
             accountClient

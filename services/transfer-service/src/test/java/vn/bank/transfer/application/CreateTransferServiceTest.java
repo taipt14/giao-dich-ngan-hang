@@ -13,7 +13,9 @@ import static org.mockito.Mockito.when;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,13 +24,16 @@ import vn.bank.common.error.BusinessException;
 import vn.bank.common.error.ErrorCode;
 import vn.bank.common.error.TechnicalException;
 import vn.bank.transfer.domain.AccountSnapshot;
+import vn.bank.transfer.domain.FeeSchedule;
 import vn.bank.transfer.domain.NewTransfer;
 import vn.bank.transfer.domain.OtpHash;
 import vn.bank.transfer.domain.Transfer;
 import vn.bank.transfer.domain.TransferErrorCode;
 import vn.bank.transfer.domain.TransferStatus;
+import vn.bank.transfer.domain.TransferType;
 import vn.bank.transfer.infrastructure.client.AccountClient;
 import vn.bank.transfer.infrastructure.client.OtpSender;
+import vn.bank.transfer.infrastructure.persistence.FeeScheduleRepository;
 import vn.bank.transfer.infrastructure.persistence.TransferRepository;
 import vn.bank.transfer.infrastructure.redis.IdempotencyStore;
 import vn.bank.transfer.infrastructure.redis.OtpStore;
@@ -43,6 +48,8 @@ class CreateTransferServiceTest {
     private static final String DEST = "100000000002";
     private static final String NAPAS_BANK_CODE = "970436";
     private static final String OTP = "042917";
+    private static final BigDecimal BALANCE = new BigDecimal("1000000000.00");
+    private static final LocalDate FEE_EFFECTIVE_FROM = LocalDate.of(2026, 1, 1);
 
     private final IdempotencyStore idempotencyStore = mock(IdempotencyStore.class);
     private final AccountClient accountClient = mock(AccountClient.class);
@@ -51,11 +58,12 @@ class CreateTransferServiceTest {
     private final OtpStore otpStore = mock(OtpStore.class);
     private final OtpSender otpSender = mock(OtpSender.class);
     private final TransferLimitService transferLimitService = mock(TransferLimitService.class);
+    private final FeeScheduleRepository feeScheduleRepository = mock(FeeScheduleRepository.class);
     private final CreateTransferService service = new CreateTransferService(
             idempotencyStore,
             accountClient,
             transferRepository,
-            new TransferFeeEstimator(),
+            new TransferFeeService(feeScheduleRepository, CLOCK),
             transferLimitService,
             otpGenerator,
             otpStore,
@@ -63,8 +71,72 @@ class CreateTransferServiceTest {
             CLOCK);
 
     @BeforeEach
-    void stubOtpGenerator() {
+    void stubOtpGeneratorAndFeeSchedule() {
         when(otpGenerator.generate()).thenReturn(OTP);
+        when(feeScheduleRepository.findByTransferType(TransferType.INTERNAL))
+                .thenReturn(List.of(feeSchedule(TransferType.INTERNAL, "0", null, "0", "0", "0")));
+        when(feeScheduleRepository.findByTransferType(TransferType.INTERBANK))
+                .thenReturn(List.of(
+                        feeSchedule(TransferType.INTERBANK, "0", "500000", "0", "0", "0"),
+                        feeSchedule(TransferType.INTERBANK, "500000", null, "0.0002", "2200", "11000")));
+    }
+
+    @Test
+    void should_storeInterbankFeeInTransfer_when_transferCreated() {
+        // given
+        givenKeyAcquired();
+        givenAccount(SOURCE, CIF, "ACTIVE");
+        when(transferRepository.saveAndFlush(any(Transfer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // when
+        var result = service.create(command(SOURCE, DEST, NAPAS_BANK_CODE, "20000000"));
+
+        // then
+        assertThat(result.transfer().getFee()).isEqualTo(new BigDecimal("4000.00"));
+    }
+
+    @Test
+    void should_createTransfer_when_availableBalanceEqualsAmountPlusFee() {
+        // given
+        givenKeyAcquired();
+        givenAccount(SOURCE, CIF, "ACTIVE", "502200.00");
+        when(transferRepository.saveAndFlush(any(Transfer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // when
+        var result = service.create(command(SOURCE, DEST, NAPAS_BANK_CODE, "500000"));
+
+        // then
+        assertThat(result.created()).isTrue();
+        assertThat(result.transfer().getFee()).isEqualTo(new BigDecimal("2200.00"));
+    }
+
+    @Test
+    void should_rejectWithInsufficientBalanceAndReleaseKey_when_balanceCoversAmountButNotFee() {
+        // given
+        givenKeyAcquired();
+        givenAccount(SOURCE, CIF, "ACTIVE", "500000.00");
+
+        // when
+        var thrown = catchThrowable(() -> service.create(command(SOURCE, DEST, NAPAS_BANK_CODE, "500000")));
+
+        // then: khong sinh OTP, khong luu lenh; nap them tien roi gui lai cung key duoc
+        assertErrorCode(thrown, TransferErrorCode.INSUFFICIENT_BALANCE);
+        verify(otpStore, never()).issue(anyString(), anyString());
+        verify(transferRepository, never()).saveAndFlush(any(Transfer.class));
+        verify(idempotencyStore).release(CIF, KEY);
+    }
+
+    @Test
+    void should_rejectWithSourceAccountAccessDenied_when_sourceOwnedByOtherCustomerAndBalanceInsufficient() {
+        // given: khong lo so du cua tai khoan nguoi khac qua ma loi
+        givenKeyAcquired();
+        givenAccount(SOURCE, "C000000009", "ACTIVE", "0.00");
+
+        // when
+        var thrown = catchThrowable(() -> service.create(command(SOURCE, DEST, null, "500000")));
+
+        // then
+        assertErrorCode(thrown, TransferErrorCode.SOURCE_ACCOUNT_ACCESS_DENIED);
     }
 
     @Test
@@ -375,7 +447,25 @@ class CreateTransferServiceTest {
     }
 
     private void givenAccount(String accountNo, String cif, String status) {
-        when(accountClient.findAccount(accountNo)).thenReturn(Optional.of(new AccountSnapshot(accountNo, cif, status)));
+        when(accountClient.findAccount(accountNo))
+                .thenReturn(Optional.of(new AccountSnapshot(accountNo, cif, status, BALANCE)));
+    }
+
+    private void givenAccount(String accountNo, String cif, String status, String availableBalance) {
+        when(accountClient.findAccount(accountNo))
+                .thenReturn(Optional.of(new AccountSnapshot(accountNo, cif, status, new BigDecimal(availableBalance))));
+    }
+
+    private static FeeSchedule feeSchedule(
+            TransferType type, String minAmount, String maxAmount, String rate, String minFee, String maxFee) {
+        var tier = new FeeSchedule.Tier(
+                type,
+                new BigDecimal(minAmount),
+                maxAmount == null ? null : new BigDecimal(maxAmount),
+                new BigDecimal(rate),
+                new BigDecimal(minFee),
+                new BigDecimal(maxFee));
+        return FeeSchedule.of(tier, FEE_EFFECTIVE_FROM);
     }
 
     private static CreateTransferCommand command(String source, String dest, String destBankCode, String amount) {

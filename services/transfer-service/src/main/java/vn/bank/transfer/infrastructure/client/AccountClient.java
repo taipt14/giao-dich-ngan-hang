@@ -11,7 +11,7 @@ import vn.bank.transfer.domain.AccountNumberMasker;
 import vn.bank.transfer.domain.AccountSnapshot;
 import vn.bank.transfer.domain.TransferErrorCode;
 
-/** Goi API noi bo cua account-service de biet tai khoan thuoc ai va dang o trang thai nao. */
+/** Goi API noi bo cua account-service de biet tai khoan thuoc ai, dang o trang thai nao va so du kha dung. */
 @Component
 public class AccountClient {
 
@@ -39,7 +39,8 @@ public class AccountClient {
                         "Empty response from account-service for " + masked,
                         null);
             }
-            return Optional.of(new AccountSnapshot(response.accountNo(), response.cif(), response.status()));
+            return Optional.of(new AccountSnapshot(
+                    response.accountNo(), response.cif(), response.status(), response.availableBalance()));
         } catch (HttpClientErrorException.NotFound e) {
             return Optional.empty();
         } catch (RestClientException e) {

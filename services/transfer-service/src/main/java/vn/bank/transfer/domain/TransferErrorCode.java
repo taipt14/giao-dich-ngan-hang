@@ -19,6 +19,8 @@ public enum TransferErrorCode implements ErrorCode {
     DEST_ACCOUNT_NOT_FOUND(422),
     DEST_ACCOUNT_NOT_ACTIVE(422),
     SAME_ACCOUNT_TRANSFER(422),
+    // So du kha dung cua tai khoan nguon nho hon so tien cong phi (BANK-044), cung ma voi account-service
+    INSUFFICIENT_BALANCE(422),
     ACCOUNT_SERVICE_UNAVAILABLE(503),
     IDEMPOTENCY_STORE_UNAVAILABLE(503),
     // Lenh khong ton tai hoac khong thuoc khach hang dang dang nhap (khong phan biet de khong lo thong tin)
