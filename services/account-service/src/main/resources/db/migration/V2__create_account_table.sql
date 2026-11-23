@@ -1,0 +1,37 @@
+-- So tai khoan = '1000' + 8 chu so lay tu sequence nay, nen gioi han 99999999 va khong quay vong
+CREATE SEQUENCE SEQ_ACCOUNT_NO START WITH 1 INCREMENT BY 1 MAXVALUE 99999999 NOCYCLE;
+
+CREATE TABLE ACCOUNT (
+    -- VARCHAR2(20): du cho so tai khoan khach hang 12 so va ma tai khoan noi bo (GL) cua BANK-030
+    ACCOUNT_NO        VARCHAR2(20)  NOT NULL,
+    CIF               VARCHAR2(10)  NOT NULL,
+    ACCOUNT_TYPE      VARCHAR2(20)  NOT NULL,
+    CURRENCY          VARCHAR2(3)   NOT NULL,
+    BALANCE           NUMBER(19, 2) NOT NULL,
+    AVAILABLE_BALANCE NUMBER(19, 2) NOT NULL,
+    STATUS            VARCHAR2(20)  NOT NULL,
+    VERSION           NUMBER(19)    NOT NULL,
+    CREATED_AT        TIMESTAMP     NOT NULL,
+    UPDATED_AT        TIMESTAMP     NOT NULL,
+    CONSTRAINT PK_ACCOUNT PRIMARY KEY (ACCOUNT_NO),
+    CONSTRAINT CK_ACCOUNT_BALANCE CHECK (BALANCE >= 0),
+    CONSTRAINT CK_ACCOUNT_TYPE CHECK (ACCOUNT_TYPE IN ('CURRENT')),
+    CONSTRAINT CK_ACCOUNT_CURRENCY CHECK (CURRENCY IN ('VND')),
+    -- LOCKED, CLOSED dung tu BANK-022; khai bao san vi migration da merge thi khong sua duoc nua
+    CONSTRAINT CK_ACCOUNT_STATUS CHECK (STATUS IN ('ACTIVE', 'LOCKED', 'CLOSED'))
+);
+
+-- Dem tai khoan cua khach hang khi mo moi (gioi han 3) va liet ke tai khoan theo CIF (BANK-021)
+CREATE INDEX IX_ACCOUNT_CIF ON ACCOUNT (CIF);
+
+COMMENT ON TABLE ACCOUNT IS 'Tai khoan thanh toan cua khach hang';
+COMMENT ON COLUMN ACCOUNT.ACCOUNT_NO IS 'So tai khoan: 1000 + 8 chu so tu SEQ_ACCOUNT_NO';
+COMMENT ON COLUMN ACCOUNT.CIF IS 'Ma khach hang chu tai khoan (customer-service)';
+COMMENT ON COLUMN ACCOUNT.ACCOUNT_TYPE IS 'Loai tai khoan: CURRENT (thanh toan)';
+COMMENT ON COLUMN ACCOUNT.CURRENCY IS 'Ma tien te ISO 4217, hien chi VND';
+COMMENT ON COLUMN ACCOUNT.BALANCE IS 'So du thuc te';
+COMMENT ON COLUMN ACCOUNT.AVAILABLE_BALANCE IS 'So du kha dung';
+COMMENT ON COLUMN ACCOUNT.STATUS IS 'Trang thai: ACTIVE, LOCKED, CLOSED';
+COMMENT ON COLUMN ACCOUNT.VERSION IS 'Phien ban cho optimistic lock';
+COMMENT ON COLUMN ACCOUNT.CREATED_AT IS 'Thoi diem mo tai khoan (UTC)';
+COMMENT ON COLUMN ACCOUNT.UPDATED_AT IS 'Thoi diem cap nhat gan nhat (UTC)';

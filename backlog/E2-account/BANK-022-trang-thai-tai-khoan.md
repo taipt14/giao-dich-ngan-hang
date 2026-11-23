@@ -4,7 +4,7 @@ epic: E2
 title: Khóa, mở khóa và đóng tài khoản
 priority: Medium
 depends_on: [BANK-020]
-status: TODO
+status: DONE
 ---
 
 # BANK-022: Khóa, mở khóa và đóng tài khoản

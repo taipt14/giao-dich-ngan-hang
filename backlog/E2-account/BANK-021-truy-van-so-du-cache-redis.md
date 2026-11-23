@@ -4,7 +4,7 @@ epic: E2
 title: Truy vấn số dư và danh sách tài khoản (cache Redis)
 priority: High
 depends_on: [BANK-020]
-status: TODO
+status: DONE
 ---
 
 # BANK-021: Truy vấn số dư và danh sách tài khoản (cache Redis)
