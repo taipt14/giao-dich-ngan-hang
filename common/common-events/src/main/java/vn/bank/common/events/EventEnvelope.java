@@ -1,5 +1,6 @@
 package vn.bank.common.events;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -18,6 +19,14 @@ public record EventEnvelope<T>(
         requireField(occurredAt, "occurredAt");
         requireField(source, "source");
         requireField(payload, "payload");
+    }
+
+    /**
+     * Tao envelope cho event moi: {@code eventId} la UUID ngau nhien, {@code occurredAt} lay tu {@code clock} (muc 4.2
+     * convention). Producer dung method nay thay vi tu goi constructor.
+     */
+    public static <T> EventEnvelope<T> of(String eventType, String source, String traceId, T payload, Clock clock) {
+        return new EventEnvelope<>(UUID.randomUUID(), eventType, Instant.now(clock), traceId, source, payload);
     }
 
     private static void requireField(Object value, String field) {

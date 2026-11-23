@@ -26,6 +26,11 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+        type:
+          # Instant luu vao cot TIMESTAMP (gia tri UTC), khong dung TIMESTAMP WITH TIME ZONE
+          preferred_instant_jdbc_type: TIMESTAMP
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   flyway:
     locations: classpath:db/migration
 

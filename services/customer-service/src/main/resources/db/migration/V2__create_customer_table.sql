@@ -1,0 +1,33 @@
+-- CIF = 'C' + 9 chu so lay tu sequence nay, nen gioi han 999999999 va khong quay vong
+CREATE SEQUENCE SEQ_CIF START WITH 1 INCREMENT BY 1 MAXVALUE 999999999 NOCYCLE;
+
+CREATE TABLE CUSTOMER (
+    CIF           VARCHAR2(10)       NOT NULL,
+    FULL_NAME     VARCHAR2(100 CHAR) NOT NULL,
+    DATE_OF_BIRTH DATE               NOT NULL,
+    ID_NUMBER     VARCHAR2(12)       NOT NULL,
+    PHONE_NUMBER  VARCHAR2(10)       NOT NULL,
+    EMAIL         VARCHAR2(254)      NOT NULL,
+    ADDRESS       VARCHAR2(255 CHAR) NOT NULL,
+    STATUS        VARCHAR2(20)       NOT NULL,
+    CREATED_AT    TIMESTAMP          NOT NULL,
+    VERSION       NUMBER(19)         NOT NULL,
+    CONSTRAINT PK_CUSTOMER PRIMARY KEY (CIF),
+    -- Rang buoc cuoi cung chong trung khi 2 request dang ky dong thoi (kiem tra truoc o tang application)
+    CONSTRAINT UK_CUSTOMER_ID_NUMBER UNIQUE (ID_NUMBER),
+    CONSTRAINT UK_CUSTOMER_PHONE_NUMBER UNIQUE (PHONE_NUMBER),
+    -- LOCKED dung tu BANK-014; khai bao san vi migration da merge thi khong sua duoc nua
+    CONSTRAINT CK_CUSTOMER_STATUS CHECK (STATUS IN ('ACTIVE', 'LOCKED'))
+);
+
+COMMENT ON TABLE CUSTOMER IS 'Ho so khach hang (CIF)';
+COMMENT ON COLUMN CUSTOMER.CIF IS 'Ma khach hang: C + 9 chu so tu SEQ_CIF';
+COMMENT ON COLUMN CUSTOMER.FULL_NAME IS 'Ho ten khach hang';
+COMMENT ON COLUMN CUSTOMER.DATE_OF_BIRTH IS 'Ngay sinh';
+COMMENT ON COLUMN CUSTOMER.ID_NUMBER IS 'So CCCD 12 chu so, duy nhat';
+COMMENT ON COLUMN CUSTOMER.PHONE_NUMBER IS 'So dien thoai Viet Nam 10 so, duy nhat';
+COMMENT ON COLUMN CUSTOMER.EMAIL IS 'Email lien he';
+COMMENT ON COLUMN CUSTOMER.ADDRESS IS 'Dia chi lien he';
+COMMENT ON COLUMN CUSTOMER.STATUS IS 'Trang thai: ACTIVE, LOCKED';
+COMMENT ON COLUMN CUSTOMER.CREATED_AT IS 'Thoi diem dang ky (UTC)';
+COMMENT ON COLUMN CUSTOMER.VERSION IS 'Phien ban cho optimistic lock';
