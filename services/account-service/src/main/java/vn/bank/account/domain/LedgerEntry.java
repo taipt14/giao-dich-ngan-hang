@@ -79,4 +79,9 @@ public class LedgerEntry {
         account.post(line.direction(), line.amount(), journal.getCreatedAt());
         return new LedgerEntry(journal, line, account.getBalance());
     }
+
+    /** So tien co dau theo huong: CREDIT duong, DEBIT am. Chi de hien thi, cot AMOUNT luon duong. */
+    public BigDecimal signedAmount() {
+        return direction == EntryDirection.CREDIT ? amount : amount.negate();
+    }
 }

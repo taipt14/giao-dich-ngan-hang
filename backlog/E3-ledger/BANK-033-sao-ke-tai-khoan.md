@@ -4,7 +4,7 @@ epic: E3
 title: Sao kê tài khoản
 priority: Medium
 depends_on: [BANK-031]
-status: TODO
+status: DONE
 ---
 
 # BANK-033: Sao kê tài khoản

@@ -185,6 +185,11 @@ public class Account {
         return new AccountBalance(accountNo, cif, currency, balance, availableBalance);
     }
 
+    /** Tai khoan GL khong co CIF nen khong thuoc khach hang nao. */
+    public boolean isOwnedBy(String customerCif) {
+        return cif != null && cif.equals(customerCif);
+    }
+
     public String getMaskedAccountNo() {
         return AccountNumberMasker.mask(accountNo);
     }
