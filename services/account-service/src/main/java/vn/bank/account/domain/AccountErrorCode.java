@@ -17,7 +17,9 @@ public enum AccountErrorCode implements ErrorCode {
     INVALID_AMOUNT(400),
     JOURNAL_NOT_BALANCED(400),
     ACCOUNT_NOT_ACTIVE(422),
-    INSUFFICIENT_BALANCE(422);
+    INSUFFICIENT_BALANCE(422),
+    // Cho khoa tai khoan qua lau (giao dich khac dang giu): loi tam thoi, client duoc retry
+    ACCOUNT_BUSY(503);
 
     private final int httpStatus;
 

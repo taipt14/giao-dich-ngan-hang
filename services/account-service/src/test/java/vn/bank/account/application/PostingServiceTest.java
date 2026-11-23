@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -20,6 +20,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -39,6 +40,7 @@ import vn.bank.account.infrastructure.persistence.AccountRepository;
 import vn.bank.account.infrastructure.persistence.JournalRepository;
 import vn.bank.account.infrastructure.persistence.LedgerEntryRepository;
 import vn.bank.common.error.BusinessException;
+import vn.bank.common.error.TechnicalException;
 
 class PostingServiceTest {
 
@@ -138,7 +140,7 @@ class PostingServiceTest {
         assertThat(result.journal()).isSameAs(existing);
         verify(ledgerEntryRepository).findByJournalIdOrderByIdAsc(5L);
         verify(journalRepository, never()).saveAndFlush(any());
-        verify(accountRepository, never()).findAllForUpdate(anyCollection());
+        verify(accountRepository, never()).findForUpdate(any());
         assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty();
     }
 
@@ -183,6 +185,43 @@ class PostingServiceTest {
         verify(ledgerEntryRepository, never()).saveAll(any());
     }
 
+    @Test
+    void should_lockAccountsInAscendingAccountNoOrder_when_linesInAnyOrder() {
+        // given: dong CASH_VAULT dung truoc nhung "100000000001" < "CASH_VAULT"
+        givenNoJournal();
+        givenSavedJournalId(14L);
+        givenAccounts(customerAccount(), glAccount());
+
+        // when
+        service.post(DEPOSIT);
+
+        // then
+        var order = inOrder(accountRepository);
+        order.verify(accountRepository).findForUpdate(CUSTOMER_ACCOUNT);
+        order.verify(accountRepository).findForUpdate(CASH_VAULT);
+    }
+
+    @Test
+    void should_throwAccountBusy_when_lockWaitTimesOut() {
+        // given
+        givenNoJournal();
+        givenSavedJournalId(15L);
+        var lockTimeout = new CannotAcquireLockException("ORA-30006: resource busy");
+        when(accountRepository.findForUpdate(CUSTOMER_ACCOUNT)).thenThrow(lockTimeout);
+
+        // when
+        var thrown = catchThrowable(() -> service.post(DEPOSIT));
+
+        // then
+        assertThat(thrown)
+                .isInstanceOf(TechnicalException.class)
+                .hasCause(lockTimeout)
+                .extracting("errorCode")
+                .isEqualTo(AccountErrorCode.ACCOUNT_BUSY);
+        verify(ledgerEntryRepository, never()).saveAll(any());
+        assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty();
+    }
+
     private void givenNoJournal() {
         when(journalRepository.findByReferenceIdAndReferenceType(any(), any())).thenReturn(Optional.empty());
     }
@@ -195,8 +234,11 @@ class PostingServiceTest {
         });
     }
 
+    // Tai khoan khong khai bao: findForUpdate tra Optional.empty() (mac dinh cua mock)
     private void givenAccounts(Account... accounts) {
-        when(accountRepository.findAllForUpdate(anyCollection())).thenReturn(List.of(accounts));
+        for (var account : accounts) {
+            when(accountRepository.findForUpdate(account.getAccountNo())).thenReturn(Optional.of(account));
+        }
     }
 
     private static Account customerAccount() {

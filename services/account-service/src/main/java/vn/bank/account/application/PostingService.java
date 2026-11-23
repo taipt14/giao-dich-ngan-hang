@@ -2,20 +2,21 @@ package vn.bank.account.application;
 
 import java.time.Clock;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.TreeSet;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import vn.bank.account.domain.Account;
 import vn.bank.account.domain.AccountErrorCode;
+import vn.bank.account.domain.AccountNumberMasker;
 import vn.bank.account.domain.BalanceChange;
 import vn.bank.account.domain.Journal;
 import vn.bank.account.domain.LedgerEntry;
@@ -26,10 +27,16 @@ import vn.bank.account.infrastructure.persistence.AccountRepository;
 import vn.bank.account.infrastructure.persistence.JournalRepository;
 import vn.bank.account.infrastructure.persistence.LedgerEntryRepository;
 import vn.bank.common.error.BusinessException;
+import vn.bank.common.error.TechnicalException;
 
 /**
  * Diem duy nhat duoc thay doi so du (docs/ledger.md). Trong mot transaction: tao JOURNAL, khoa cac tai khoan lien
  * quan, cap nhat so du, ghi LEDGER_ENTRY kem BALANCE_AFTER. Mot dong vi pham quy tac thi toan bo rollback.
+ *
+ * <p>Dung khoa bi quan ({@code SELECT ... FOR UPDATE}) thay vi chi dua vao {@code VERSION}: tai khoan nong (nhieu
+ * posting cung luc) voi khoa lac quan se lien tuc xung dot, client phai retry nhieu lan; con khoa bi quan cho cac
+ * posting xep hang, kiem tra so du tren gia tri moi nhat va BALANCE_AFTER khong bi chen. Cho khoa qua
+ * {@link AccountRepository#LOCK_TIMEOUT_MILLIS} → 503 {@code ACCOUNT_BUSY}.
  */
 @Slf4j
 @Service
@@ -86,17 +93,32 @@ public class PostingService {
         return new PostingResult(journal, ledgerEntryRepository.findByJournalIdOrderByIdAsc(journal.getId()), false);
     }
 
+    /**
+     * Khoa tung tai khoan theo {@code ACCOUNT_NO} tang dan: moi posting xin khoa theo cung mot thu tu nen khong the co
+     * vong cho nhau (A cho B, B cho A) gay deadlock.
+     */
     private Map<String, Account> lockAccounts(List<PostingLine> lines) {
-        var accountNos = new LinkedHashSet<String>();
+        var accountNos = new TreeSet<String>();
         lines.forEach(line -> accountNos.add(line.accountNo()));
-        var accounts = accountRepository.findAllForUpdate(accountNos).stream()
-                .collect(Collectors.toMap(Account::getAccountNo, Function.identity()));
+        var accounts = new LinkedHashMap<String, Account>();
         for (var accountNo : accountNos) {
-            if (!accounts.containsKey(accountNo)) {
-                throw new BusinessException(AccountErrorCode.ACCOUNT_NOT_FOUND, "Account not found: " + accountNo);
-            }
+            accounts.put(accountNo, lockAccount(accountNo));
         }
         return accounts;
+    }
+
+    private Account lockAccount(String accountNo) {
+        try {
+            return accountRepository
+                    .findForUpdate(accountNo)
+                    .orElseThrow(() -> new BusinessException(
+                            AccountErrorCode.ACCOUNT_NOT_FOUND, "Account not found: " + accountNo));
+        } catch (PessimisticLockingFailureException e) {
+            throw new TechnicalException(
+                    AccountErrorCode.ACCOUNT_BUSY,
+                    "Account " + AccountNumberMasker.mask(accountNo) + " is busy, please retry",
+                    e);
+        }
     }
 
     // Muc 8 convention: khong gui Kafka trong transaction DB. Tam gui truc tiep sau commit, BANK-046 thay bang outbox
