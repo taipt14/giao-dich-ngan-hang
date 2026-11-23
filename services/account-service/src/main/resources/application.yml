@@ -66,3 +66,6 @@ bank:
     balance-cache:
       # Muc 6 kien-truc.md: cache so du balance:{accountNo} song 5 phut
       ttl: 5m
+    reconcile:
+      # Doi soat cuoi ngay (BANK-034), gio Asia/Ho_Chi_Minh; "-" de tat lich
+      cron: "0 55 23 * * *"

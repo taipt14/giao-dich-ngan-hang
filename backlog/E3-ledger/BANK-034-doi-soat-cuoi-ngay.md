@@ -4,7 +4,7 @@ epic: E3
 title: Đối soát cuối ngày bằng PL/SQL
 priority: Medium
 depends_on: [BANK-031]
-status: TODO
+status: DONE
 ---
 
 # BANK-034: Đối soát cuối ngày bằng PL/SQL
