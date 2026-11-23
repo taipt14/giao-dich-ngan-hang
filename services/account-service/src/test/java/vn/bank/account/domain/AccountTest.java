@@ -92,4 +92,21 @@ class AccountTest {
         // then
         assertThat(masked).isEqualTo("1000****5678");
     }
+
+    @Test
+    void should_returnBalanceOwnedByHolderOnly_when_convertedToBalance() {
+        // given
+        var account = Account.open(ACCOUNT_NO, ACTIVE_HOLDER, AccountType.CURRENT, 0, CLOCK);
+
+        // when
+        var balance = account.toBalance();
+
+        // then
+        assertThat(balance.accountNo()).isEqualTo(ACCOUNT_NO);
+        assertThat(balance.currency()).isEqualTo("VND");
+        assertThat(balance.balance()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(balance.availableBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(balance.isOwnedBy(CIF)).isTrue();
+        assertThat(balance.isOwnedBy("C000000002")).isFalse();
+    }
 }

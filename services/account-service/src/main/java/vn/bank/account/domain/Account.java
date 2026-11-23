@@ -95,6 +95,10 @@ public class Account {
         return new Account(accountNo, holder.cif(), accountType, clock.instant());
     }
 
+    public AccountBalance toBalance() {
+        return new AccountBalance(accountNo, cif, currency, balance, availableBalance);
+    }
+
     public String getMaskedAccountNo() {
         return AccountNumberMasker.mask(accountNo);
     }
