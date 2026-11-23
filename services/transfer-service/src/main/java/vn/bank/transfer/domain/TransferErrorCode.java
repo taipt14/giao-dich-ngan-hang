@@ -25,6 +25,8 @@ public enum TransferErrorCode implements ErrorCode {
     IDEMPOTENCY_STORE_UNAVAILABLE(503),
     // Lenh khong ton tai hoac khong thuoc khach hang dang dang nhap (khong phan biet de khong lo thong tin)
     TRANSFER_NOT_FOUND(404),
+    // Tra cuu lich su lenh voi ngay bat dau sau ngay ket thuc (BANK-047)
+    TRANSFER_RANGE_INVALID(400),
     // Lenh khong o trang thai OTP_PENDING: da xac thuc OTP, da FAILED hoac da xu ly xong
     TRANSFER_NOT_AWAITING_OTP(422),
     OTP_EXPIRED(422),
