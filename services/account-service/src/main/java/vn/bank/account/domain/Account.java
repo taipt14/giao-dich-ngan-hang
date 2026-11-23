@@ -29,6 +29,7 @@ public class Account {
     @Column(name = "ACCOUNT_NO")
     private String accountNo;
 
+    // NULL voi tai khoan GL (CK_ACCOUNT_CIF)
     @Column(name = "CIF")
     private String cif;
 
@@ -76,11 +77,17 @@ public class Account {
     }
 
     /**
-     * Mo tai khoan VND moi o trang thai ACTIVE, so du 0. Chu tai khoan phai ACTIVE va dang co it hon
+     * Mo tai khoan VND moi o trang thai ACTIVE, so du 0. Chi mo duoc loai tai khoan khach hang: tai khoan GL tao san
+     * bang migration → {@code ACCOUNT_TYPE_NOT_ALLOWED}. Chu tai khoan phai ACTIVE va dang co it hon
      * {@link #MAX_CURRENT_ACCOUNTS_PER_CUSTOMER} tai khoan thanh toan ({@code existingAccounts}).
      */
     public static Account open(
             String accountNo, AccountHolder holder, AccountType accountType, long existingAccounts, Clock clock) {
+        if (!accountType.isCustomerAccount()) {
+            throw new BusinessException(
+                    AccountErrorCode.ACCOUNT_TYPE_NOT_ALLOWED,
+                    "Account type " + accountType + " cannot be opened for a customer");
+        }
         if (!holder.isActive()) {
             throw new BusinessException(
                     AccountErrorCode.CUSTOMER_NOT_ACTIVE,
@@ -120,8 +127,67 @@ public class Account {
         return new AccountStatusChange(accountNo, cif, previousStatus, target, reason, now);
     }
 
+    /** Ghi mot dong so cai vao tai khoan: DEBIT giam so du, CREDIT tang so du (docs/ledger.md muc 2). */
+    public void post(EntryDirection direction, BigDecimal amount, Instant now) {
+        switch (direction) {
+            case DEBIT -> debit(amount, now);
+            case CREDIT -> credit(amount, now);
+        }
+    }
+
+    /**
+     * Tru tien. Tai khoan khach hang phai ACTIVE ({@code ACCOUNT_NOT_ACTIVE}) va du so du ({@code INSUFFICIENT_BALANCE});
+     * tai khoan GL duoc phep am.
+     */
+    public void debit(BigDecimal amount, Instant now) {
+        requirePositive(amount);
+        if (accountType.isCustomerAccount()) {
+            requireActive();
+            if (balance.compareTo(amount) < 0) {
+                throw new BusinessException(
+                        AccountErrorCode.INSUFFICIENT_BALANCE,
+                        "Insufficient balance in account " + getMaskedAccountNo());
+            }
+        }
+        changeBalance(amount.negate(), now);
+    }
+
+    /** Cong tien. Tai khoan khach hang phai ACTIVE ({@code ACCOUNT_NOT_ACTIVE}). */
+    public void credit(BigDecimal amount, Instant now) {
+        requirePositive(amount);
+        if (accountType.isCustomerAccount()) {
+            requireActive();
+        }
+        changeBalance(amount, now);
+    }
+
+    // Chua co phong toa tien (hold) nen so du kha dung luon thay doi cung so du thuc te
+    private void changeBalance(BigDecimal delta, Instant now) {
+        this.balance = balance.add(delta);
+        this.availableBalance = availableBalance.add(delta);
+        this.updatedAt = now;
+    }
+
+    private void requireActive() {
+        if (status != AccountStatus.ACTIVE) {
+            throw new BusinessException(
+                    AccountErrorCode.ACCOUNT_NOT_ACTIVE, "Account " + getMaskedAccountNo() + " is " + status);
+        }
+    }
+
+    private static void requirePositive(BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(AccountErrorCode.INVALID_AMOUNT, "Amount must be positive");
+        }
+    }
+
     public AccountBalance toBalance() {
         return new AccountBalance(accountNo, cif, currency, balance, availableBalance);
+    }
+
+    /** Tai khoan GL khong co CIF nen khong thuoc khach hang nao. */
+    public boolean isOwnedBy(String customerCif) {
+        return cif != null && cif.equals(customerCif);
     }
 
     public String getMaskedAccountNo() {

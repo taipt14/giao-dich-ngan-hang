@@ -4,7 +4,7 @@ epic: E3
 title: Thiết kế bảng sổ cái và tài khoản nội bộ (GL)
 priority: High
 depends_on: [BANK-020]
-status: TODO
+status: DONE
 ---
 
 # BANK-030: Thiết kế bảng sổ cái và tài khoản nội bộ (GL)

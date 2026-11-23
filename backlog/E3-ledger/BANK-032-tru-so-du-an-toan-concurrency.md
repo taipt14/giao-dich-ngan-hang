@@ -4,7 +4,7 @@ epic: E3
 title: Trừ số dư an toàn khi có nhiều giao dịch đồng thời
 priority: High
 depends_on: [BANK-031]
-status: TODO
+status: DONE
 ---
 
 # BANK-032: Trừ số dư an toàn khi có nhiều giao dịch đồng thời

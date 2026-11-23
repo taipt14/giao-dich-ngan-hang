@@ -82,6 +82,21 @@ class AccountTest {
     }
 
     @Test
+    void should_rejectOpening_when_accountTypeIsGl() {
+        // given: tai khoan GL chi tao san bang migration
+        var accountType = AccountType.GL;
+
+        // when
+        var thrown = catchThrowable(() -> Account.open(ACCOUNT_NO, ACTIVE_HOLDER, accountType, 0, CLOCK));
+
+        // then
+        assertThat(thrown)
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(AccountErrorCode.ACCOUNT_TYPE_NOT_ALLOWED);
+    }
+
+    @Test
     void should_returnMaskedAccountNo_when_askedForMaskedAccountNo() {
         // given
         var account = Account.open("100012345678", ACTIVE_HOLDER, AccountType.CURRENT, 0, CLOCK);

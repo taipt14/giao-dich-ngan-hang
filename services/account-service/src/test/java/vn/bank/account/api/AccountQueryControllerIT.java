@@ -136,6 +136,17 @@ class AccountQueryControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void should_return403AccountAccessDenied_when_customerReadsGlAccount() {
+        // given: tai khoan GL CASH_VAULT tao san boi migration, khong co CIF
+
+        // when
+        var response = getBalance(randomCif(), "CASH_VAULT", ErrorResponse.class);
+
+        // then
+        assertError(response, HttpStatus.FORBIDDEN, "ACCOUNT_ACCESS_DENIED");
+    }
+
+    @Test
     void should_return403AccountAccessDenied_when_otherCustomersAccountAlreadyCached() {
         // given
         var owner = randomCif();
