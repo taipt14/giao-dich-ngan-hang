@@ -151,6 +151,23 @@ public class Transfer {
         return status.isFinal();
     }
 
+    /** Lenh do khach hang {@code customerCif} tao. */
+    public boolean isOwnedBy(String customerCif) {
+        return cif.equals(customerCif);
+    }
+
+    public boolean isAwaitingOtp() {
+        return status == TransferStatus.OTP_PENDING;
+    }
+
+    /** Chi lenh OTP_PENDING moi xac thuc / gui lai OTP duoc, con lai → {@code TRANSFER_NOT_AWAITING_OTP}. */
+    public void requireAwaitingOtp() {
+        if (!isAwaitingOtp()) {
+            throw new BusinessException(
+                    TransferErrorCode.TRANSFER_NOT_AWAITING_OTP, "Transfer " + transferId + " is " + status);
+        }
+    }
+
     /** Lich su doi trang thai theo thu tu xay ra, chi doc. */
     public List<TransferStatusHistory> getStatusHistory() {
         return Collections.unmodifiableList(statusHistory);

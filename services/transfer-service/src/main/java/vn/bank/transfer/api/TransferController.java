@@ -5,19 +5,22 @@ import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.bank.common.error.BusinessException;
+import vn.bank.transfer.application.ConfirmOtpService;
 import vn.bank.transfer.application.CreateTransferCommand;
 import vn.bank.transfer.application.CreateTransferService;
+import vn.bank.transfer.application.ResendOtpService;
 import vn.bank.transfer.domain.TransferErrorCode;
 
 /**
- * Khach hang tao lenh chuyen khoan. Lenh moi tra 201; gui lai cung {@code Idempotency-Key} va cung noi dung tra 200
- * kem lenh cu, khong tao lenh moi.
+ * Khach hang tao lenh chuyen khoan va xac thuc lenh bang OTP. Lenh moi tra 201 o OTP_PENDING (OTP da gui); gui lai
+ * cung {@code Idempotency-Key} va cung noi dung tra 200 kem lenh cu, khong tao lenh moi va khong sinh OTP moi.
  */
 @RestController
 @RequestMapping("/api/v1/transfers")
@@ -33,6 +36,8 @@ class TransferController {
             Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
 
     private final CreateTransferService createTransferService;
+    private final ConfirmOtpService confirmOtpService;
+    private final ResendOtpService resendOtpService;
     private final TransferMapper transferMapper;
 
     // Header doc voi required=false de tra ma loi rieng IDEMPOTENCY_KEY_REQUIRED thay vi loi thieu header chung
@@ -53,6 +58,24 @@ class TransferController {
         var result = createTransferService.create(command);
         var status = result.created() ? HttpStatus.CREATED : HttpStatus.OK;
         return ResponseEntity.status(status).body(transferMapper.toResponse(result.transfer()));
+    }
+
+    /** Xac thuc lenh bang OTP; chi chu lenh (CIF cua lenh = {@code X-Cif}). Thanh cong tra lenh o PROCESSING. */
+    @PostMapping("/{transferId}/confirm")
+    @RequiresRole(Role.CUSTOMER)
+    TransferResponse confirm(
+            @RequestHeader(name = CIF_HEADER, required = false) String cif,
+            @PathVariable String transferId,
+            @Valid @RequestBody ConfirmOtpRequest request) {
+        return transferMapper.toResponse(confirmOtpService.confirm(transferId, requireCif(cif), request.otp()));
+    }
+
+    /** Gui lai OTP cho lenh OTP_PENDING; chi chu lenh. OTP khong bao gio nam trong response. */
+    @PostMapping("/{transferId}/otp/resend")
+    @RequiresRole(Role.CUSTOMER)
+    TransferResponse resendOtp(
+            @RequestHeader(name = CIF_HEADER, required = false) String cif, @PathVariable String transferId) {
+        return transferMapper.toResponse(resendOtpService.resend(transferId, requireCif(cif)));
     }
 
     private static String requireCif(String cif) {

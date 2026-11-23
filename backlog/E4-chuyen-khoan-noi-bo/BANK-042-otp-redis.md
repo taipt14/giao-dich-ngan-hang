@@ -4,7 +4,7 @@ epic: E4
 title: Xác thực OTP bằng Redis
 priority: High
 depends_on: [BANK-041]
-status: TODO
+status: DONE
 ---
 
 # BANK-042: Xác thực OTP bằng Redis

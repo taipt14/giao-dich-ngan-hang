@@ -257,6 +257,46 @@ class TransferTest {
         assertThat(transfer.getStatus()).isEqualTo(TransferStatus.OTP_PENDING);
     }
 
+    @Test
+    void should_acceptOtp_when_transferOtpPending() {
+        // given
+        var transfer = internalTransfer();
+        transfer.changeStatus(TransferStatus.OTP_PENDING, CLOCK);
+
+        // when
+        var thrown = catchThrowable(transfer::requireAwaitingOtp);
+
+        // then
+        assertThat(thrown).isNull();
+        assertThat(transfer.isAwaitingOtp()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"INITIATED", "PROCESSING", "FAILED"})
+    void should_rejectWithTransferNotAwaitingOtp_when_transferNotOtpPending(TransferStatus status) {
+        // given
+        var transfer = transferIn(status, TransferType.INTERNAL);
+
+        // when
+        var thrown = catchThrowable(transfer::requireAwaitingOtp);
+
+        // then
+        assertThat(thrown)
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(TransferErrorCode.TRANSFER_NOT_AWAITING_OTP);
+    }
+
+    @Test
+    void should_beOwnedOnlyByCreatingCustomer_when_checkingOwner() {
+        // given
+        var transfer = internalTransfer();
+
+        // when / then
+        assertThat(transfer.isOwnedBy("C000000001")).isTrue();
+        assertThat(transfer.isOwnedBy("C000000002")).isFalse();
+    }
+
     private static void assertInvalidTransition(Throwable thrown) {
         assertThat(thrown)
                 .isInstanceOf(BusinessException.class)

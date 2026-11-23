@@ -1,0 +1,141 @@
+package vn.bank.transfer.application;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import org.junit.jupiter.api.Test;
+import vn.bank.common.error.BusinessException;
+import vn.bank.common.error.ErrorCode;
+import vn.bank.transfer.domain.NewTransfer;
+import vn.bank.transfer.domain.OtpHash;
+import vn.bank.transfer.domain.Transfer;
+import vn.bank.transfer.domain.TransferErrorCode;
+import vn.bank.transfer.domain.TransferStatus;
+import vn.bank.transfer.infrastructure.redis.OtpStore;
+import vn.bank.transfer.infrastructure.redis.OtpVerification;
+import vn.bank.transfer.infrastructure.redis.OtpVerification.Outcome;
+
+class ConfirmOtpServiceTest {
+
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-11-23T03:00:00Z"), ZoneOffset.UTC);
+    private static final String TRANSFER_ID = "7f1c2a9e-1d2b-4c3d-9e8f-0a1b2c3d4e5f";
+    private static final String CIF = "C000000001";
+    private static final String OTP = "042917";
+    private static final String OTP_HASH = OtpHash.of(TRANSFER_ID, OTP);
+
+    private final OtpTransferStatusService otpTransferStatusService = mock(OtpTransferStatusService.class);
+    private final OtpStore otpStore = mock(OtpStore.class);
+    private final ConfirmOtpService service = new ConfirmOtpService(otpTransferStatusService, otpStore);
+
+    @Test
+    void should_moveTransferToProcessing_when_otpCorrect() {
+        // given
+        var processing = transferIn(TransferStatus.PROCESSING);
+        givenAwaitingOtp();
+        when(otpStore.verify(TRANSFER_ID, OTP_HASH)).thenReturn(new OtpVerification(Outcome.VERIFIED, 0));
+        when(otpTransferStatusService.markOtpVerified(TRANSFER_ID)).thenReturn(processing);
+
+        // when
+        var transfer = service.confirm(TRANSFER_ID, CIF, OTP);
+
+        // then
+        assertThat(transfer.getStatus()).isEqualTo(TransferStatus.PROCESSING);
+    }
+
+    @Test
+    void should_rejectWithOtpExpired_when_otpNoLongerStored() {
+        // given
+        givenAwaitingOtp();
+        when(otpStore.verify(TRANSFER_ID, OTP_HASH)).thenReturn(new OtpVerification(Outcome.EXPIRED, 0));
+
+        // when
+        var thrown = catchThrowable(() -> service.confirm(TRANSFER_ID, CIF, OTP));
+
+        // then
+        assertErrorCode(thrown, TransferErrorCode.OTP_EXPIRED);
+        verify(otpTransferStatusService, never()).markOtpVerified(anyString());
+    }
+
+    @Test
+    void should_rejectWithOtpInvalidAndKeepTransfer_when_otpWrong() {
+        // given
+        givenAwaitingOtp();
+        when(otpStore.verify(TRANSFER_ID, OTP_HASH)).thenReturn(new OtpVerification(Outcome.MISMATCH, 2));
+
+        // when
+        var thrown = catchThrowable(() -> service.confirm(TRANSFER_ID, CIF, OTP));
+
+        // then
+        assertErrorCode(thrown, TransferErrorCode.OTP_INVALID);
+        assertThat(thrown).hasMessageNotContaining(OTP);
+        verify(otpTransferStatusService, never()).failByOtpMaxAttempts(anyString());
+    }
+
+    @Test
+    void should_failTransferWithOtpMaxAttemptsAndDiscardOtp_when_fifthWrongOtp() {
+        // given
+        givenAwaitingOtp();
+        when(otpStore.verify(TRANSFER_ID, OTP_HASH)).thenReturn(new OtpVerification(Outcome.MAX_ATTEMPTS_REACHED, 5));
+
+        // when
+        var thrown = catchThrowable(() -> service.confirm(TRANSFER_ID, CIF, OTP));
+
+        // then
+        assertErrorCode(thrown, TransferErrorCode.OTP_MAX_ATTEMPTS);
+        verify(otpTransferStatusService).failByOtpMaxAttempts(TRANSFER_ID);
+        verify(otpStore).discard(TRANSFER_ID);
+    }
+
+    @Test
+    void should_rejectWithoutCheckingOtp_when_transferNotAwaitingOtp() {
+        // given: lenh da FAILED / da xac thuc
+        when(otpTransferStatusService.getAwaitingOtp(TRANSFER_ID, CIF))
+                .thenThrow(new BusinessException(TransferErrorCode.TRANSFER_NOT_AWAITING_OTP, "FAILED"));
+
+        // when
+        var thrown = catchThrowable(() -> service.confirm(TRANSFER_ID, CIF, OTP));
+
+        // then
+        assertErrorCode(thrown, TransferErrorCode.TRANSFER_NOT_AWAITING_OTP);
+        verify(otpStore, never()).verify(anyString(), anyString());
+    }
+
+    private void givenAwaitingOtp() {
+        when(otpTransferStatusService.getAwaitingOtp(TRANSFER_ID, CIF))
+                .thenReturn(transferIn(TransferStatus.OTP_PENDING));
+    }
+
+    private static Transfer transferIn(TransferStatus status) {
+        var request = new NewTransfer(
+                CIF,
+                "0b9f3c1e-5a7d-4e2f-8c6b-1d2e3f4a5b6c",
+                "100000000001",
+                "100000000002",
+                null,
+                new BigDecimal("500000"),
+                BigDecimal.ZERO,
+                "Chuyen tien");
+        var transfer = Transfer.initiate(TRANSFER_ID, request, CLOCK);
+        transfer.changeStatus(TransferStatus.OTP_PENDING, CLOCK);
+        if (status == TransferStatus.PROCESSING) {
+            transfer.changeStatus(TransferStatus.PROCESSING, CLOCK);
+        }
+        return transfer;
+    }
+
+    private static void assertErrorCode(Throwable thrown, ErrorCode code) {
+        assertThat(thrown)
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(code);
+    }
+}

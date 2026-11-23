@@ -54,3 +54,14 @@ bank:
     idempotency:
       # Muc 6 kien-truc.md: key idem:{clientId}:{idempotencyKey} song 24h
       ttl: 24h
+    otp:
+      # Muc 6 kien-truc.md: otp:{transferId} va otp:fail:{transferId} song 3 phut
+      ttl: 3m
+      # Sai lan thu 5 → lenh FAILED (OTP_MAX_ATTEMPTS)
+      max-attempts: 5
+      max-resend: 3
+      resend-interval: 30s
+      # Bo dem otp:resend:{transferId} phai song lau hon OTP, de het OTP roi van khong gui lai qua so lan
+      resend-counter-ttl: 24h
+      # Chi bat o moi truong dev (profile local): ghi OTP dang ro ra log thay cho SMS
+      dev-log-enabled: false

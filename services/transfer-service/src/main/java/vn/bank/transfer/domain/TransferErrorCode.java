@@ -20,7 +20,20 @@ public enum TransferErrorCode implements ErrorCode {
     DEST_ACCOUNT_NOT_ACTIVE(422),
     SAME_ACCOUNT_TRANSFER(422),
     ACCOUNT_SERVICE_UNAVAILABLE(503),
-    IDEMPOTENCY_STORE_UNAVAILABLE(503);
+    IDEMPOTENCY_STORE_UNAVAILABLE(503),
+    // Lenh khong ton tai hoac khong thuoc khach hang dang dang nhap (khong phan biet de khong lo thong tin)
+    TRANSFER_NOT_FOUND(404),
+    // Lenh khong o trang thai OTP_PENDING: da xac thuc OTP, da FAILED hoac da xu ly xong
+    TRANSFER_NOT_AWAITING_OTP(422),
+    OTP_EXPIRED(422),
+    OTP_INVALID(422),
+    // Sai OTP den so lan toi da: lenh FAILED voi FAILURE_CODE = OTP_MAX_ATTEMPTS
+    OTP_MAX_ATTEMPTS(422),
+    // Gui lai OTP chua du khoang cach toi thieu tu lan gui truoc
+    OTP_RESEND_TOO_SOON(429),
+    OTP_RESEND_LIMIT_EXCEEDED(422),
+    // Redis loi o luong OTP bat buoc (muc 12 convention)
+    OTP_STORE_UNAVAILABLE(503);
 
     private final int httpStatus;
 

@@ -94,7 +94,7 @@ class TransferControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void should_return201WithInitiatedTransferAndExpectedFee_when_transferCreated() {
+    void should_return201WithOtpPendingTransferAndExpectedFee_when_transferCreated() {
         // given
         var key = newKey();
 
@@ -107,15 +107,15 @@ class TransferControllerIT extends AbstractIntegrationTest {
         assertThat(transfer).isNotNull();
         assertThat(transfer.transferId()).isNotBlank();
         assertThat(transfer.type()).isEqualTo(TransferType.INTERNAL);
-        assertThat(transfer.status()).isEqualTo(TransferStatus.INITIATED);
+        assertThat(transfer.status()).isEqualTo(TransferStatus.OTP_PENDING);
         assertThat(transfer.amount()).isEqualTo(new BigDecimal("1500000.00"));
         assertThat(transfer.fee()).isEqualTo(new BigDecimal("0.00"));
         var row = jdbcTemplate.queryForMap(
                 "SELECT TRANSFER_ID, STATUS, CIF, IDEMPOTENCY_KEY FROM TRANSFER WHERE CIF = ? AND IDEMPOTENCY_KEY = ?",
                 cif,
                 key);
-        assertThat(row).containsEntry("TRANSFER_ID", transfer.transferId()).containsEntry("STATUS", "INITIATED");
-        assertThat(historyStatusesOf(transfer.transferId())).containsExactly("INITIATED");
+        assertThat(row).containsEntry("TRANSFER_ID", transfer.transferId()).containsEntry("STATUS", "OTP_PENDING");
+        assertThat(historyStatusesOf(transfer.transferId())).containsExactly("INITIATED", "OTP_PENDING");
     }
 
     @Test

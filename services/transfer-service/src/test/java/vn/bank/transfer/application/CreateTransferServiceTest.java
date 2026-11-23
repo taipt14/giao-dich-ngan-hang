@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -14,18 +15,22 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import vn.bank.common.error.BusinessException;
 import vn.bank.common.error.ErrorCode;
 import vn.bank.common.error.TechnicalException;
 import vn.bank.transfer.domain.AccountSnapshot;
+import vn.bank.transfer.domain.OtpHash;
 import vn.bank.transfer.domain.Transfer;
 import vn.bank.transfer.domain.TransferErrorCode;
 import vn.bank.transfer.domain.TransferStatus;
 import vn.bank.transfer.infrastructure.client.AccountClient;
+import vn.bank.transfer.infrastructure.client.OtpSender;
 import vn.bank.transfer.infrastructure.persistence.TransferRepository;
 import vn.bank.transfer.infrastructure.redis.IdempotencyStore;
+import vn.bank.transfer.infrastructure.redis.OtpStore;
 
 class CreateTransferServiceTest {
 
@@ -36,15 +41,31 @@ class CreateTransferServiceTest {
     private static final String SOURCE = "100000000001";
     private static final String DEST = "100000000002";
     private static final String NAPAS_BANK_CODE = "970436";
+    private static final String OTP = "042917";
 
     private final IdempotencyStore idempotencyStore = mock(IdempotencyStore.class);
     private final AccountClient accountClient = mock(AccountClient.class);
     private final TransferRepository transferRepository = mock(TransferRepository.class);
+    private final OtpGenerator otpGenerator = mock(OtpGenerator.class);
+    private final OtpStore otpStore = mock(OtpStore.class);
+    private final OtpSender otpSender = mock(OtpSender.class);
     private final CreateTransferService service = new CreateTransferService(
-            idempotencyStore, accountClient, transferRepository, new TransferFeeEstimator(), CLOCK);
+            idempotencyStore,
+            accountClient,
+            transferRepository,
+            new TransferFeeEstimator(),
+            otpGenerator,
+            otpStore,
+            otpSender,
+            CLOCK);
+
+    @BeforeEach
+    void stubOtpGenerator() {
+        when(otpGenerator.generate()).thenReturn(OTP);
+    }
 
     @Test
-    void should_createInitiatedTransferWithZeroFee_when_accountsValid() {
+    void should_createOtpPendingTransferWithZeroFee_when_accountsValid() {
         // given
         givenKeyAcquired();
         givenAccount(SOURCE, CIF, "ACTIVE");
@@ -57,12 +78,52 @@ class CreateTransferServiceTest {
         // then
         assertThat(result.created()).isTrue();
         var transfer = result.transfer();
-        assertThat(transfer.getStatus()).isEqualTo(TransferStatus.INITIATED);
+        assertThat(transfer.getStatus()).isEqualTo(TransferStatus.OTP_PENDING);
+        assertThat(transfer.getStatusHistory())
+                .extracting("status")
+                .containsExactly(TransferStatus.INITIATED, TransferStatus.OTP_PENDING);
         assertThat(transfer.getCif()).isEqualTo(CIF);
         assertThat(transfer.getIdempotencyKey()).isEqualTo(KEY);
         assertThat(transfer.getFee()).isEqualByComparingTo("0");
         assertThat(transfer.getCreatedAt()).isEqualTo(NOW);
         verify(idempotencyStore, never()).release(anyString(), anyString());
+    }
+
+    @Test
+    void should_storeOtpHashAndSendOtp_when_transferCreated() {
+        // given
+        givenKeyAcquired();
+        givenAccount(SOURCE, CIF, "ACTIVE");
+        givenAccount(DEST, "C000000002", "ACTIVE");
+        when(transferRepository.saveAndFlush(any(Transfer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // when
+        var transferId =
+                service.create(command(SOURCE, DEST, null, "500000")).transfer().getTransferId();
+
+        // then: Redis chi giu hash, OTP dang ro chi di qua OtpSender
+        verify(otpStore).issue(transferId, OtpHash.of(transferId, OTP));
+        verify(otpSender).send(transferId, OTP);
+    }
+
+    @Test
+    void should_notSaveTransferAndReleaseKey_when_otpStoreUnavailable() {
+        // given
+        givenKeyAcquired();
+        givenAccount(SOURCE, CIF, "ACTIVE");
+        givenAccount(DEST, "C000000002", "ACTIVE");
+        doThrow(new TechnicalException(TransferErrorCode.OTP_STORE_UNAVAILABLE, "down", null))
+                .when(otpStore)
+                .issue(anyString(), anyString());
+
+        // when
+        var thrown = catchThrowable(() -> service.create(command(SOURCE, DEST, null, "500000")));
+
+        // then: chua co lenh nao, client gui lai cung key de tao lai
+        assertThat(thrown).isInstanceOf(TechnicalException.class);
+        verify(transferRepository, never()).saveAndFlush(any(Transfer.class));
+        verify(otpSender, never()).send(anyString(), anyString());
+        verify(idempotencyStore).release(CIF, KEY);
     }
 
     @Test
@@ -94,6 +155,8 @@ class CreateTransferServiceTest {
         assertThat(result.created()).isFalse();
         assertThat(result.transfer()).isSameAs(existing);
         verify(accountClient, never()).findAccount(anyString());
+        verify(otpGenerator, never()).generate();
+        verify(otpSender, never()).send(anyString(), anyString());
     }
 
     @Test
@@ -140,6 +203,8 @@ class CreateTransferServiceTest {
         assertThat(result.created()).isFalse();
         assertThat(result.transfer()).isSameAs(existing);
         verify(transferRepository, never()).saveAndFlush(any(Transfer.class));
+        verify(otpStore, never()).issue(anyString(), anyString());
+        verify(otpSender, never()).send(anyString(), anyString());
     }
 
     @Test
@@ -176,6 +241,7 @@ class CreateTransferServiceTest {
         // then
         assertThat(result.created()).isFalse();
         assertThat(result.transfer()).isSameAs(concurrent);
+        verify(otpSender, never()).send(anyString(), anyString());
     }
 
     @Test

@@ -1,0 +1,6 @@
+# Profile local: chay tren may dev (muc 16 convention)
+bank:
+  transfer:
+    otp:
+      # Chua co SMS: OTP ghi ra log, danh dau [DEV] (BANK-042). Khong bat o moi truong khac
+      dev-log-enabled: true

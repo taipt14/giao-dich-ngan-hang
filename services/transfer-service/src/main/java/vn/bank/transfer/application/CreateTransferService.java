@@ -9,18 +9,23 @@ import org.springframework.stereotype.Service;
 import vn.bank.common.error.BusinessException;
 import vn.bank.transfer.domain.AccountNumberMasker;
 import vn.bank.transfer.domain.NewTransfer;
+import vn.bank.transfer.domain.OtpHash;
 import vn.bank.transfer.domain.Transfer;
 import vn.bank.transfer.domain.TransferErrorCode;
+import vn.bank.transfer.domain.TransferStatus;
 import vn.bank.transfer.domain.TransferType;
 import vn.bank.transfer.infrastructure.client.AccountClient;
+import vn.bank.transfer.infrastructure.client.OtpSender;
 import vn.bank.transfer.infrastructure.persistence.TransferRepository;
 import vn.bank.transfer.infrastructure.redis.IdempotencyStore;
+import vn.bank.transfer.infrastructure.redis.OtpStore;
 
 /**
- * Tao lenh chuyen khoan o trang thai INITIATED, idempotent theo (CIF, Idempotency-Key) bang hai lop: Redis {@code SET
- * NX} chan request trung den cung luc, UK_TRANSFER_CIF_IDEM_KEY trong DB chan khi Redis mat key (het TTL, mat du lieu).
- * Cung key, cung noi dung → tra lenh cu; khac noi dung → {@code IDEMPOTENCY_KEY_REUSED}. Goi account-service truoc,
- * ngoai transaction; ghi DB bang mot lenh {@code saveAndFlush} (transaction cua repository).
+ * Tao lenh chuyen khoan (INITIATED) va sinh OTP ngay (lenh luu xuong o OTP_PENDING, lich su co ca hai buoc).
+ * Idempotent theo (CIF, Idempotency-Key) bang hai lop: Redis {@code SET NX} chan request trung den cung luc,
+ * UK_TRANSFER_CIF_IDEM_KEY trong DB chan khi Redis mat key (het TTL, mat du lieu). Cung key, cung noi dung → tra lenh
+ * cu, khong sinh OTP moi; khac noi dung → {@code IDEMPOTENCY_KEY_REUSED}. Goi account-service va luu hash OTP truoc,
+ * ngoai transaction; ghi DB bang mot lenh {@code saveAndFlush} (transaction cua repository); OTP chi gui khi da luu lenh.
  */
 @Slf4j
 @Service
@@ -31,6 +36,9 @@ public class CreateTransferService {
     private final AccountClient accountClient;
     private final TransferRepository transferRepository;
     private final TransferFeeEstimator transferFeeEstimator;
+    private final OtpGenerator otpGenerator;
+    private final OtpStore otpStore;
+    private final OtpSender otpSender;
     private final Clock clock;
 
     /**
@@ -80,20 +88,32 @@ public class CreateTransferService {
             return replay(request, existing.get());
         }
         requireAccounts(request);
+        var otp = issueOtp(transfer);
         try {
             var saved = transferRepository.saveAndFlush(transfer);
             log.info(
-                    "Transfer {} initiated from account {}",
+                    "Transfer {} initiated from account {}, status {}",
                     saved.getTransferId(),
-                    AccountNumberMasker.mask(saved.getSourceAccount()));
+                    AccountNumberMasker.mask(saved.getSourceAccount()),
+                    saved.getStatus());
+            otpSender.send(saved.getTransferId(), otp);
             return new CreateTransferResult(saved, true);
         } catch (DataIntegrityViolationException e) {
-            // Vi pham UK_TRANSFER_CIF_IDEM_KEY: request cung key vua tao lenh trong luc Redis khong giu key
+            // Vi pham UK_TRANSFER_CIF_IDEM_KEY: request cung key vua tao lenh trong luc Redis khong giu key.
+            // OTP vua luu thuoc transferId khong duoc tao, khong xac thuc duoc va tu het han theo TTL
             var concurrent = transferRepository
                     .findByCifAndIdempotencyKey(request.cif(), request.idempotencyKey())
                     .orElseThrow(() -> e);
             return replay(request, concurrent);
         }
+    }
+
+    // Luu hash OTP truoc khi ghi DB: Redis loi thi chua co lenh nao, client gui lai cung key de tao lai
+    private String issueOtp(Transfer transfer) {
+        var otp = otpGenerator.generate();
+        transfer.changeStatus(TransferStatus.OTP_PENDING, clock);
+        otpStore.issue(transfer.getTransferId(), OtpHash.of(transfer.getTransferId(), otp));
+        return otp;
     }
 
     private void requireAccounts(NewTransfer request) {
