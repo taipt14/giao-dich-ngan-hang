@@ -1,6 +1,7 @@
 package vn.bank.account.infrastructure.persistence;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -27,6 +28,9 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, Long> 
 
     // Dung index IX_LEDGER_ENTRY_JOURNAL_ID; ENTRY_ID tang theo thu tu ghi nen sap theo id = thu tu dong
     List<LedgerEntry> findByJournalIdOrderByIdAsc(Long journalId);
+
+    // Dong cua nhieu journal trong mot truy van (tranh N+1 khi tra soat), dung index IX_LEDGER_ENTRY_JOURNAL_ID
+    List<LedgerEntry> findByJournalIdInOrderByIdAsc(Collection<Long> journalIds);
 
     @Query(value = STATEMENT_QUERY, nativeQuery = true)
     List<LedgerEntry> findStatementEntries(

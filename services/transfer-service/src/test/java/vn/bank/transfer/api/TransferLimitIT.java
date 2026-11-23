@@ -29,17 +29,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClient;
 import vn.bank.common.error.ErrorResponse;
 import vn.bank.common.test.AbstractIntegrationTest;
 import vn.bank.transfer.application.OtpGenerator;
-import vn.bank.transfer.application.TransferLimitService;
 import vn.bank.transfer.domain.BankZone;
-import vn.bank.transfer.domain.Transfer;
 import vn.bank.transfer.domain.TransferStatus;
-import vn.bank.transfer.infrastructure.persistence.TransferRepository;
 import vn.bank.transfer.infrastructure.redis.RedisKeys;
 import vn.bank.transfer.support.FakeAccountService;
 
@@ -59,9 +54,6 @@ class TransferLimitIT extends AbstractIntegrationTest {
 
     private final JdbcTemplate jdbcTemplate;
     private final StringRedisTemplate redisTemplate;
-    private final TransferRepository transferRepository;
-    private final TransferLimitService transferLimitService;
-    private final TransactionTemplate transactionTemplate;
     private final Clock clock;
 
     @MockitoBean
@@ -78,15 +70,9 @@ class TransferLimitIT extends AbstractIntegrationTest {
     TransferLimitIT(
             @Autowired JdbcTemplate jdbcTemplate,
             @Autowired StringRedisTemplate redisTemplate,
-            @Autowired TransferRepository transferRepository,
-            @Autowired TransferLimitService transferLimitService,
-            @Autowired PlatformTransactionManager transactionManager,
             @Autowired Clock clock) {
         this.jdbcTemplate = jdbcTemplate;
         this.redisTemplate = redisTemplate;
-        this.transferRepository = transferRepository;
-        this.transferLimitService = transferLimitService;
-        this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.clock = clock;
     }
 
@@ -140,7 +126,7 @@ class TransferLimitIT extends AbstractIntegrationTest {
     @Test
     void should_recomputeFromTransferTable_when_redisLostDailyUsage() {
         // given: lenh FAILED khong tinh vao han muc khi tinh lai
-        failAndRelease(createAndConfirm(HUNDRED_MILLION));
+        createAndFailAtPosting(HUNDRED_MILLION);
         givenTransferredToday450Million();
         redisTemplate.delete(dailyLimitKey());
 
@@ -151,7 +137,7 @@ class TransferLimitIT extends AbstractIntegrationTest {
 
         // then
         assertError(over, HttpStatus.UNPROCESSABLE_CONTENT, "DAILY_LIMIT_EXCEEDED");
-        assertThat(confirmed.getBody().status()).isEqualTo(TransferStatus.PROCESSING);
+        assertThat(confirmed.getBody().status()).isEqualTo(TransferStatus.SUCCESS);
         assertThat(usedToday()).isEqualTo("50000000000");
     }
 
@@ -200,28 +186,27 @@ class TransferLimitIT extends AbstractIntegrationTest {
                 .filteredOn(response -> response.getStatusCode() == HttpStatus.UNPROCESSABLE_CONTENT)
                 .hasSize(5)
                 .allSatisfy(response -> assertThat(response.getBody()).contains("DAILY_LIMIT_EXCEEDED"));
-        assertThat(countTransfersIn("PROCESSING")).isEqualTo(5);
+        assertThat(countTransfersIn("SUCCESS")).isEqualTo(5);
         assertThat(countTransfersIn("FAILED")).isEqualTo(5);
         assertThat(usedToday()).isEqualTo("50000000000");
     }
 
     @Test
     void should_releaseDailyLimit_when_transferFailed() {
-        // given: da dung het 500 trieu
-        var transferIds = new ArrayList<String>();
-        for (var i = 0; i < 5; i++) {
-            transferIds.add(createAndConfirm(HUNDRED_MILLION));
+        // given: da chuyen 400 trieu, lenh thu 5 va lenh thu 6 (100 trieu) deu tao duoc vi chua giu cho
+        for (var i = 0; i < 4; i++) {
+            createAndConfirm(HUNDRED_MILLION);
         }
-        assertError(
-                create(HUNDRED_MILLION, ErrorResponse.class), HttpStatus.UNPROCESSABLE_CONTENT, "DAILY_LIMIT_EXCEEDED");
-
-        // when: posting loi nghiep vu, lenh FAILED va hoan han muc (BANK-045 goi)
-        failAndRelease(transferIds.getFirst());
-
-        // then
-        assertThat(usedToday()).isEqualTo("40000000000");
         var retried = createTransfer(HUNDRED_MILLION);
-        assertThat(confirm(retried, TransferResponse.class).getBody().status()).isEqualTo(TransferStatus.PROCESSING);
+
+        // when: lenh thu 5 giu cho roi posting loi nghiep vu, lenh FAILED va hoan han muc (BANK-045)
+        var failed = createAndFailAtPosting(HUNDRED_MILLION);
+
+        // then: phan da hoan du cho lenh thu 6, neu khong hoan thi lenh thu 6 vuot 500 trieu
+        assertThat(failed.status()).isEqualTo(TransferStatus.FAILED);
+        assertThat(usedToday()).isEqualTo("40000000000");
+        assertThat(confirm(retried, TransferResponse.class).getBody().status()).isEqualTo(TransferStatus.SUCCESS);
+        assertThat(usedToday()).isEqualTo("50000000000");
     }
 
     private void givenTransferredToday450Million() {
@@ -231,13 +216,13 @@ class TransferLimitIT extends AbstractIntegrationTest {
         createAndConfirm("50000000");
     }
 
-    private void failAndRelease(String transferId) {
-        Transfer failed = transactionTemplate.execute(status -> {
-            var transfer = transferRepository.findById(transferId).orElseThrow();
-            transfer.fail("INSUFFICIENT_BALANCE", clock);
-            return transfer;
-        });
-        transferLimitService.release(failed);
+    // OTP dung, han muc da giu, nhung account-service tu choi posting: lenh FAILED va han muc duoc hoan (BANK-045)
+    private TransferResponse createAndFailAtPosting(String amount) {
+        var transferId = createTransfer(amount);
+        ACCOUNT_SERVICE.givenPostingRejected(transferId, "INSUFFICIENT_BALANCE");
+        var response = confirm(transferId, TransferResponse.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        return response.getBody();
     }
 
     private String createAndConfirm(String amount) {

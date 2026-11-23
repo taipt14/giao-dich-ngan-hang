@@ -33,6 +33,8 @@ import vn.bank.common.error.BusinessException;
 public class Transfer {
 
     private static final int MONEY_SCALE = 2;
+    // Tai khoan GL thu nhap phi cua ngan hang o account-service (docs/ledger.md muc 3)
+    static final String FEE_INCOME_ACCOUNT = "FEE_INCOME";
 
     @Id
     @Column(name = "TRANSFER_ID")
@@ -149,6 +151,28 @@ public class Transfer {
 
     public boolean isFinal() {
         return status.isFinal();
+    }
+
+    public boolean isInternal() {
+        return type == TransferType.INTERNAL;
+    }
+
+    /**
+     * Cac dong but toan cua lenh noi bo (docs/ledger.md 4.2): No tai khoan nguon so tien cong phi, Co tai khoan dich so
+     * tien, Co {@value #FEE_INCOME_ACCOUNT} phan phi (bo dong nay khi phi = 0). Tien va phi nam chung mot journal nen
+     * thanh cong hoac that bai cung nhau.
+     */
+    public List<PostingLine> toInternalPostingLines() {
+        if (!isInternal()) {
+            throw new IllegalStateException("Transfer " + transferId + " is " + type + ", not an internal transfer");
+        }
+        var lines = new ArrayList<PostingLine>();
+        lines.add(new PostingLine(sourceAccount, PostingDirection.DEBIT, amount.add(fee)));
+        lines.add(new PostingLine(destAccount, PostingDirection.CREDIT, amount));
+        if (fee.compareTo(BigDecimal.ZERO) > 0) {
+            lines.add(new PostingLine(FEE_INCOME_ACCOUNT, PostingDirection.CREDIT, fee));
+        }
+        return List.copyOf(lines);
     }
 
     /** Lenh do khach hang {@code customerCif} tao. */

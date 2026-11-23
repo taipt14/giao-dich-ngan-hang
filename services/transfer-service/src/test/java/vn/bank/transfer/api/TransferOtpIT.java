@@ -131,7 +131,7 @@ class TransferOtpIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void should_return200ProcessingAndDeleteOtp_when_correctOtpConfirmed() {
+    void should_return200ExecutedTransferAndDeleteOtp_when_correctOtpConfirmed() {
         // given
         var transferId = createTransfer();
 
@@ -140,9 +140,9 @@ class TransferOtpIT extends AbstractIntegrationTest {
 
         // then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody().status()).isEqualTo(TransferStatus.PROCESSING);
-        assertThat(statusOf(transferId)).isEqualTo("PROCESSING");
-        assertThat(historyStatusesOf(transferId)).containsExactly("INITIATED", "OTP_PENDING", "PROCESSING");
+        assertThat(response.getBody().status()).isEqualTo(TransferStatus.SUCCESS);
+        assertThat(statusOf(transferId)).isEqualTo("SUCCESS");
+        assertThat(historyStatusesOf(transferId)).containsExactly("INITIATED", "OTP_PENDING", "PROCESSING", "SUCCESS");
         assertThat(redisTemplate.hasKey("otp:" + transferId)).isFalse();
     }
 
@@ -172,7 +172,7 @@ class TransferOtpIT extends AbstractIntegrationTest {
 
         // then
         assertError(response, HttpStatus.UNPROCESSABLE_CONTENT, "TRANSFER_NOT_AWAITING_OTP");
-        assertThat(historyStatusesOf(transferId)).containsExactly("INITIATED", "OTP_PENDING", "PROCESSING");
+        assertThat(historyStatusesOf(transferId)).containsExactly("INITIATED", "OTP_PENDING", "PROCESSING", "SUCCESS");
     }
 
     @Test
@@ -281,7 +281,7 @@ class TransferOtpIT extends AbstractIntegrationTest {
         assertThat(confirm(transferId, cif, RESENT_OTP, TransferResponse.class)
                         .getBody()
                         .status())
-                .isEqualTo(TransferStatus.PROCESSING);
+                .isEqualTo(TransferStatus.SUCCESS);
     }
 
     @Test

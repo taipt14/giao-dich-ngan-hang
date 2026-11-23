@@ -41,7 +41,12 @@ public enum TransferErrorCode implements ErrorCode {
     // Tong da chuyen trong ngay cong lenh nay vuot han muc ngay; luc xac thuc OTP thi lenh FAILED voi ma nay
     DAILY_LIMIT_EXCEEDED(422),
     // Redis loi khi giu cho han muc ngay (luong bat buoc, muc 12 convention)
-    TRANSFER_LIMIT_STORE_UNAVAILABLE(503);
+    TRANSFER_LIMIT_STORE_UNAVAILABLE(503),
+    // Hai ma duoi chi dung lam FAILURE_CODE khi account-service tu choi posting (BANK-045), confirm van tra 200.
+    // Tai khoan nguon hoac dich khong con ACTIVE luc ghi but toan
+    ACCOUNT_NOT_ACTIVE(422),
+    // account-service tu choi posting voi ma loi khac (khong mong doi): tien chua bi tru, can xem log
+    POSTING_REJECTED(422);
 
     private final int httpStatus;
 

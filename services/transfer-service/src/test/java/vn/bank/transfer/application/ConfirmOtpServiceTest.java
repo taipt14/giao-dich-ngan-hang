@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -39,14 +40,38 @@ class ConfirmOtpServiceTest {
     private final OtpTransferStatusService otpTransferStatusService = mock(OtpTransferStatusService.class);
     private final OtpStore otpStore = mock(OtpStore.class);
     private final TransferLimitService transferLimitService = mock(TransferLimitService.class);
-    private final ConfirmOtpService service =
-            new ConfirmOtpService(otpTransferStatusService, otpStore, transferLimitService);
+    private final ExecuteInternalTransferService executeInternalTransferService =
+            mock(ExecuteInternalTransferService.class);
+    private final ConfirmOtpService service = new ConfirmOtpService(
+            otpTransferStatusService, otpStore, transferLimitService, executeInternalTransferService);
 
     @Test
-    void should_moveTransferToProcessing_when_otpCorrect() {
+    void should_executeInternalTransferAfterProcessing_when_otpCorrect() {
         // given
         var processing = transferIn(TransferStatus.PROCESSING);
+        var executed = transferIn(TransferStatus.SUCCESS);
         givenAwaitingOtp();
+        when(otpStore.verify(TRANSFER_ID, OTP_HASH)).thenReturn(new OtpVerification(Outcome.VERIFIED, 0));
+        givenLimitReserved();
+        when(otpTransferStatusService.markOtpVerified(TRANSFER_ID)).thenReturn(processing);
+        when(executeInternalTransferService.execute(processing)).thenReturn(executed);
+
+        // when
+        var transfer = service.confirm(TRANSFER_ID, CIF, OTP);
+
+        // then: posting chi chay sau khi PROCESSING da commit
+        var inOrder = inOrder(otpTransferStatusService, executeInternalTransferService);
+        inOrder.verify(otpTransferStatusService).markOtpVerified(TRANSFER_ID);
+        inOrder.verify(executeInternalTransferService).execute(processing);
+        assertThat(transfer.getStatus()).isEqualTo(TransferStatus.SUCCESS);
+        verify(transferLimitService, never()).cancel(any(DailyLimitReservation.class));
+    }
+
+    @Test
+    void should_keepProcessingWithoutPosting_when_interbankTransferConfirmed() {
+        // given: lien ngan hang di qua NAPAS (E5), khong posting noi bo
+        var processing = interbankProcessingTransfer();
+        when(otpTransferStatusService.getAwaitingOtp(TRANSFER_ID, CIF)).thenReturn(processing);
         when(otpStore.verify(TRANSFER_ID, OTP_HASH)).thenReturn(new OtpVerification(Outcome.VERIFIED, 0));
         givenLimitReserved();
         when(otpTransferStatusService.markOtpVerified(TRANSFER_ID)).thenReturn(processing);
@@ -56,7 +81,7 @@ class ConfirmOtpServiceTest {
 
         // then
         assertThat(transfer.getStatus()).isEqualTo(TransferStatus.PROCESSING);
-        verify(transferLimitService, never()).cancel(any(DailyLimitReservation.class));
+        verify(executeInternalTransferService, never()).execute(any(Transfer.class));
     }
 
     @Test
@@ -189,9 +214,28 @@ class ConfirmOtpServiceTest {
                 "Chuyen tien");
         var transfer = Transfer.initiate(TRANSFER_ID, request, CLOCK);
         transfer.changeStatus(TransferStatus.OTP_PENDING, CLOCK);
-        if (status == TransferStatus.PROCESSING) {
+        if (status == TransferStatus.PROCESSING || status == TransferStatus.SUCCESS) {
             transfer.changeStatus(TransferStatus.PROCESSING, CLOCK);
         }
+        if (status == TransferStatus.SUCCESS) {
+            transfer.changeStatus(TransferStatus.SUCCESS, CLOCK);
+        }
+        return transfer;
+    }
+
+    private static Transfer interbankProcessingTransfer() {
+        var request = new NewTransfer(
+                CIF,
+                "0b9f3c1e-5a7d-4e2f-8c6b-1d2e3f4a5b6c",
+                "100000000001",
+                "9704000000001",
+                "970436",
+                new BigDecimal("500000"),
+                new BigDecimal("2200"),
+                "Chuyen tien");
+        var transfer = Transfer.initiate(TRANSFER_ID, request, CLOCK);
+        transfer.changeStatus(TransferStatus.OTP_PENDING, CLOCK);
+        transfer.changeStatus(TransferStatus.PROCESSING, CLOCK);
         return transfer;
     }
 

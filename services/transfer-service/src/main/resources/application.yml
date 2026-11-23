@@ -65,3 +65,8 @@ bank:
       resend-counter-ttl: 24h
       # Chi bat o moi truong dev (profile local): ghi OTP dang ro ra log thay cho SMS
       dev-log-enabled: false
+    posting:
+      # Loi ky thuat (timeout, 5xx) khi goi POST /internal/postings: retry toi da 3 lan (an toan vi posting idempotent
+      # theo transferId); van loi → lenh UNKNOWN cho tra soat
+      max-retries: 3
+      retry-wait: 500ms

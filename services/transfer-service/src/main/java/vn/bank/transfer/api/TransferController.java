@@ -60,7 +60,10 @@ class TransferController {
         return ResponseEntity.status(status).body(transferMapper.toResponse(result.transfer()));
     }
 
-    /** Xac thuc lenh bang OTP; chi chu lenh (CIF cua lenh = {@code X-Cif}). Thanh cong tra lenh o PROCESSING. */
+    /**
+     * Xac thuc lenh bang OTP; chi chu lenh (CIF cua lenh = {@code X-Cif}). OTP dung tra 200 kem lenh da thuc hien:
+     * SUCCESS, FAILED (kem {@code failureCode}) hoac UNKNOWN (cho tra soat); lenh lien ngan hang o PROCESSING.
+     */
     @PostMapping("/{transferId}/confirm")
     @RequiresRole(Role.CUSTOMER)
     TransferResponse confirm(

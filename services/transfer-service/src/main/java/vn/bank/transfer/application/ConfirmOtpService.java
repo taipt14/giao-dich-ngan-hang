@@ -12,9 +12,10 @@ import vn.bank.transfer.infrastructure.redis.OtpVerification;
 
 /**
  * Khach hang xac thuc lenh bang OTP. Dung → OTP bi xoa (dung mot lan), giu cho han muc ngay roi lenh sang PROCESSING;
- * vuot han muc ngay → lenh FAILED ({@code DAILY_LIMIT_EXCEEDED}). Sai → tang bo dem; sai den so lan toi da → lenh
- * FAILED ({@code OTP_MAX_ATTEMPTS}), nhap dung sau do van bi tu choi vi lenh khong con cho OTP. Thao tac Redis nam
- * ngoai transaction DB (muc 8 convention).
+ * lenh noi bo duoc thuc hien ngay sau khi PROCESSING da commit (BANK-045) nen tra ve o SUCCESS, FAILED hoac UNKNOWN;
+ * lenh lien ngan hang giu PROCESSING (E5). Vuot han muc ngay → lenh FAILED ({@code DAILY_LIMIT_EXCEEDED}). Sai → tang
+ * bo dem; sai den so lan toi da → lenh FAILED ({@code OTP_MAX_ATTEMPTS}), nhap dung sau do van bi tu choi vi lenh khong
+ * con cho OTP. Thao tac Redis va REST nam ngoai transaction DB (muc 8 convention).
  */
 @Slf4j
 @Service
@@ -24,6 +25,7 @@ public class ConfirmOtpService {
     private final OtpTransferStatusService otpTransferStatusService;
     private final OtpStore otpStore;
     private final TransferLimitService transferLimitService;
+    private final ExecuteInternalTransferService executeInternalTransferService;
 
     /**
      * Lenh khong ton tai / cua khach hang khac → {@code TRANSFER_NOT_FOUND}; khong o OTP_PENDING →
@@ -43,8 +45,13 @@ public class ConfirmOtpService {
         };
     }
 
-    // Giu cho han muc truoc khi sang PROCESSING: lenh PROCESSING luon da giu cho (tinh lai tu DB dua tren dieu nay)
     private Transfer verified(Transfer awaiting) {
+        var processing = markProcessing(awaiting);
+        return processing.isInternal() ? executeInternalTransferService.execute(processing) : processing;
+    }
+
+    // Giu cho han muc truoc khi sang PROCESSING: lenh PROCESSING luon da giu cho (tinh lai tu DB dua tren dieu nay)
+    private Transfer markProcessing(Transfer awaiting) {
         var transferId = awaiting.getTransferId();
         var reservation = transferLimitService.tryReserve(awaiting);
         if (reservation.isEmpty()) {

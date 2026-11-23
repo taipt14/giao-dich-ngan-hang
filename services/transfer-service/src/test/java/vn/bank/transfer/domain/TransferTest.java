@@ -297,6 +297,46 @@ class TransferTest {
         assertThat(transfer.isOwnedBy("C000000002")).isFalse();
     }
 
+    @Test
+    void should_debitSourceAndCreditDest_when_internalTransferWithoutFee() {
+        // given: A chuyen 300.000 cho B, phi noi bo = 0 (docs/ledger.md 4.2)
+        var transfer = internalTransfer();
+
+        // when
+        var lines = transfer.toInternalPostingLines();
+
+        // then: khong co dong FEE_INCOME
+        assertThat(lines)
+                .containsExactly(
+                        new PostingLine("100000000001", PostingDirection.DEBIT, new BigDecimal("300000.00")),
+                        new PostingLine("100000000002", PostingDirection.CREDIT, new BigDecimal("300000.00")));
+    }
+
+    @Test
+    void should_debitAmountPlusFeeAndCreditFeeIncome_when_internalTransferHasFee() {
+        // given
+        var transfer = Transfer.initiate(TRANSFER_ID, newTransfer(null, "300000", "2200"), CREATE_CLOCK);
+
+        // when
+        var lines = transfer.toInternalPostingLines();
+
+        // then
+        assertThat(lines)
+                .containsExactly(
+                        new PostingLine("100000000001", PostingDirection.DEBIT, new BigDecimal("302200.00")),
+                        new PostingLine("100000000002", PostingDirection.CREDIT, new BigDecimal("300000.00")),
+                        new PostingLine("FEE_INCOME", PostingDirection.CREDIT, new BigDecimal("2200.00")));
+    }
+
+    @Test
+    void should_rejectInternalPostingLines_when_interbankTransfer() {
+        // when
+        var thrown = catchThrowable(() -> interbankTransfer().toInternalPostingLines());
+
+        // then
+        assertThat(thrown).isInstanceOf(IllegalStateException.class);
+    }
+
     private static void assertInvalidTransition(Throwable thrown) {
         assertThat(thrown)
                 .isInstanceOf(BusinessException.class)
