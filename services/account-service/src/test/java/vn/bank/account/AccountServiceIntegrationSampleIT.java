@@ -50,6 +50,17 @@ class AccountServiceIntegrationSampleIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void should_createUserOfEverySchemaInInitScript_when_oracleContainerStarted() {
+        // given: SERVICE_SCHEMAS doc tu infra/oracle/init/01_create_service_schemas.sh
+
+        // when
+        var users = jdbcTemplate.queryForList("select username from all_users", String.class);
+
+        // then
+        assertThat(users).containsAll(SERVICE_SCHEMAS);
+    }
+
+    @Test
     void should_exposeKafkaAndRedisProperties_when_extendingAbstractIntegrationTest() throws Exception {
         // given: container Kafka, Redis dung chung
 
@@ -87,7 +98,8 @@ class AccountServiceIntegrationSampleIT extends AbstractIntegrationTest {
 
         // when
         try (var consumer = createKafkaTestConsumer(SAMPLE_TOPIC)) {
-            var found = consumer.findRecord(consumerRecord -> missingKey.equals(consumerRecord.key()), NO_RECORD_TIMEOUT);
+            var found =
+                    consumer.findRecord(consumerRecord -> missingKey.equals(consumerRecord.key()), NO_RECORD_TIMEOUT);
 
             // then
             assertThat(found).isEmpty();

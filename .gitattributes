@@ -1,0 +1,2 @@
+# Spotless kiem line ending LF (BANK-008): checkout file Java luon la LF, ke ca khi may dev bat core.autocrlf
+*.java text eol=lf

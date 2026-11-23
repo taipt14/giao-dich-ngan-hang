@@ -25,8 +25,7 @@ public final class EventJson {
             .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
             .build();
 
-    private EventJson() {
-    }
+    private EventJson() {}
 
     public static JsonMapper mapper() {
         return MAPPER;

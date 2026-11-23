@@ -4,7 +4,7 @@ epic: E0
 title: Chuyển integration test của các service sang AbstractIntegrationTest
 priority: High
 depends_on: [BANK-006, BANK-008]
-status: TODO
+status: DONE
 ---
 
 # BANK-009: Chuyển integration test của các service sang AbstractIntegrationTest

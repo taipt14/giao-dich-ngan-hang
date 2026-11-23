@@ -13,8 +13,7 @@ public final class Topics {
     /** Hau to topic chua message loi sau khi het retry: {@code <topic>.DLQ}. */
     public static final String DLQ_SUFFIX = ".DLQ";
 
-    private Topics() {
-    }
+    private Topics() {}
 
     public static String toDlq(String topic) {
         return topic + DLQ_SUFFIX;
