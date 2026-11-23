@@ -21,7 +21,10 @@ public enum AccountErrorCode implements ErrorCode {
     // Cho khoa tai khoan qua lau (giao dich khac dang giu): loi tam thoi, client duoc retry
     ACCOUNT_BUSY(503),
     STATEMENT_RANGE_TOO_LARGE(400),
-    STATEMENT_RANGE_INVALID(400);
+    STATEMENT_RANGE_INVALID(400),
+    DEPOSIT_LIMIT_EXCEEDED(422),
+    // Idempotency-Key da dung cho mot lan nap tien khac (khac tai khoan hoac so tien)
+    IDEMPOTENCY_KEY_REUSED(422);
 
     private final int httpStatus;
 

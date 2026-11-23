@@ -4,7 +4,7 @@ epic: E2
 title: Nạp tiền tại quầy (ADMIN)
 priority: High
 depends_on: [BANK-031]
-status: TODO
+status: DONE
 ---
 
 # BANK-023: Nạp tiền tại quầy (ADMIN)
