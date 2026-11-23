@@ -4,7 +4,7 @@ epic: E3
 title: API posting nội bộ: ghi bút toán và cập nhật số dư
 priority: High
 depends_on: [BANK-030]
-status: TODO
+status: DONE
 ---
 
 # BANK-031: API posting nội bộ: ghi bút toán và cập nhật số dư

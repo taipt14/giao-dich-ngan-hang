@@ -127,6 +127,60 @@ public class Account {
         return new AccountStatusChange(accountNo, cif, previousStatus, target, reason, now);
     }
 
+    /** Ghi mot dong so cai vao tai khoan: DEBIT giam so du, CREDIT tang so du (docs/ledger.md muc 2). */
+    public void post(EntryDirection direction, BigDecimal amount, Instant now) {
+        switch (direction) {
+            case DEBIT -> debit(amount, now);
+            case CREDIT -> credit(amount, now);
+        }
+    }
+
+    /**
+     * Tru tien. Tai khoan khach hang phai ACTIVE ({@code ACCOUNT_NOT_ACTIVE}) va du so du ({@code INSUFFICIENT_BALANCE});
+     * tai khoan GL duoc phep am.
+     */
+    public void debit(BigDecimal amount, Instant now) {
+        requirePositive(amount);
+        if (accountType.isCustomerAccount()) {
+            requireActive();
+            if (balance.compareTo(amount) < 0) {
+                throw new BusinessException(
+                        AccountErrorCode.INSUFFICIENT_BALANCE,
+                        "Insufficient balance in account " + getMaskedAccountNo());
+            }
+        }
+        changeBalance(amount.negate(), now);
+    }
+
+    /** Cong tien. Tai khoan khach hang phai ACTIVE ({@code ACCOUNT_NOT_ACTIVE}). */
+    public void credit(BigDecimal amount, Instant now) {
+        requirePositive(amount);
+        if (accountType.isCustomerAccount()) {
+            requireActive();
+        }
+        changeBalance(amount, now);
+    }
+
+    // Chua co phong toa tien (hold) nen so du kha dung luon thay doi cung so du thuc te
+    private void changeBalance(BigDecimal delta, Instant now) {
+        this.balance = balance.add(delta);
+        this.availableBalance = availableBalance.add(delta);
+        this.updatedAt = now;
+    }
+
+    private void requireActive() {
+        if (status != AccountStatus.ACTIVE) {
+            throw new BusinessException(
+                    AccountErrorCode.ACCOUNT_NOT_ACTIVE, "Account " + getMaskedAccountNo() + " is " + status);
+        }
+    }
+
+    private static void requirePositive(BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(AccountErrorCode.INVALID_AMOUNT, "Amount must be positive");
+        }
+    }
+
     public AccountBalance toBalance() {
         return new AccountBalance(accountNo, cif, currency, balance, availableBalance);
     }
