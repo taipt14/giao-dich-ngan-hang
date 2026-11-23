@@ -72,6 +72,79 @@ class CustomerTest {
         assertThat(masked).isEqualTo("0012******89");
     }
 
+    @Test
+    void should_updateOnlyGivenContactFields_when_updatingContact() {
+        // given
+        var customer = Customer.register(CIF, profileBornOn(LocalDate.of(1990, 5, 15)), CLOCK);
+
+        // when
+        customer.updateContact(new CustomerContactUpdate(null, "new@example.com", null));
+
+        // then
+        assertThat(customer.getEmail()).isEqualTo("new@example.com");
+        assertThat(customer.getPhoneNumber()).isEqualTo("0912345678");
+        assertThat(customer.getAddress()).isEqualTo("1 Ly Thai To, Ha Noi");
+        assertThat(customer.getFullName()).isEqualTo("Nguyen Van A");
+        assertThat(customer.getIdNumber()).isEqualTo("001234567889");
+    }
+
+    @Test
+    void should_lockCustomerAndReturnChange_when_changingActiveToLocked() {
+        // given
+        var customer = Customer.register(CIF, profileBornOn(LocalDate.of(1990, 5, 15)), CLOCK);
+
+        // when
+        var change = customer.changeStatus(CustomerStatus.LOCKED, "Nghi ngo gian lan", CLOCK);
+
+        // then
+        assertThat(customer.getStatus()).isEqualTo(CustomerStatus.LOCKED);
+        assertThat(change)
+                .isEqualTo(new CustomerStatusChange(
+                        CIF, CustomerStatus.ACTIVE, CustomerStatus.LOCKED, "Nghi ngo gian lan", NOW));
+    }
+
+    @Test
+    void should_unlockCustomer_when_changingLockedToActive() {
+        // given
+        var customer = Customer.register(CIF, profileBornOn(LocalDate.of(1990, 5, 15)), CLOCK);
+        customer.changeStatus(CustomerStatus.LOCKED, "Nghi ngo gian lan", CLOCK);
+
+        // when
+        var change = customer.changeStatus(CustomerStatus.ACTIVE, "Da xac minh", CLOCK);
+
+        // then
+        assertThat(customer.getStatus()).isEqualTo(CustomerStatus.ACTIVE);
+        assertThat(change.previousStatus()).isEqualTo(CustomerStatus.LOCKED);
+    }
+
+    @Test
+    void should_rejectStatusChange_when_targetStatusSameAsCurrent() {
+        // given
+        var customer = Customer.register(CIF, profileBornOn(LocalDate.of(1990, 5, 15)), CLOCK);
+
+        // when
+        var thrown = catchThrowable(() -> customer.changeStatus(CustomerStatus.ACTIVE, "Mo lai", CLOCK));
+
+        // then
+        assertThat(thrown)
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(CustomerErrorCode.CUSTOMER_STATUS_UNCHANGED);
+    }
+
+    @Test
+    void should_rejectStatusChange_when_reasonBlank() {
+        // given
+        var customer = Customer.register(CIF, profileBornOn(LocalDate.of(1990, 5, 15)), CLOCK);
+
+        // when
+        var thrown = catchThrowable(() -> customer.changeStatus(CustomerStatus.LOCKED, " ", CLOCK));
+
+        // then
+        assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+        assertThat(customer.getStatus()).isEqualTo(CustomerStatus.ACTIVE);
+    }
+
     private static CustomerProfile profileBornOn(LocalDate dateOfBirth) {
         return new CustomerProfile(
                 "Nguyen Van A", dateOfBirth, "001234567889", "0912345678", "a@example.com", "1 Ly Thai To, Ha Noi");

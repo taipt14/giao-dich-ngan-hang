@@ -10,6 +10,8 @@ public interface CustomerRepository extends JpaRepository<Customer, String> {
 
     boolean existsByPhoneNumber(String phoneNumber);
 
+    boolean existsByPhoneNumberAndCifNot(String phoneNumber, String cif);
+
     @Query(value = "SELECT SEQ_CIF.NEXTVAL FROM DUAL", nativeQuery = true)
     long nextCifSequence();
 }

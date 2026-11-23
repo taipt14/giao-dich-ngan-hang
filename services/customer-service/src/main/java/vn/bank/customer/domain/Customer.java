@@ -79,6 +79,33 @@ public class Customer {
         return new Customer(cif, profile, now);
     }
 
+    /** Cap nhat thong tin lien he; ho ten, ngay sinh, CCCD khong bao gio doi qua method nay. */
+    public void updateContact(CustomerContactUpdate update) {
+        if (update.phoneNumber() != null) {
+            this.phoneNumber = update.phoneNumber();
+        }
+        if (update.email() != null) {
+            this.email = update.email();
+        }
+        if (update.address() != null) {
+            this.address = update.address();
+        }
+    }
+
+    /** Doi trang thai (ACTIVE / LOCKED), bat buoc co ly do. Doi sang chinh trang thai hien tai bi tu choi. */
+    public CustomerStatusChange changeStatus(CustomerStatus target, String reason, Clock clock) {
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("Reason is required to change customer status");
+        }
+        if (status == target) {
+            throw new BusinessException(
+                    CustomerErrorCode.CUSTOMER_STATUS_UNCHANGED, "Customer " + cif + " is already " + target);
+        }
+        var previousStatus = status;
+        this.status = target;
+        return new CustomerStatusChange(cif, previousStatus, target, reason, clock.instant());
+    }
+
     public String getMaskedIdNumber() {
         return IdNumberMasker.mask(idNumber);
     }
