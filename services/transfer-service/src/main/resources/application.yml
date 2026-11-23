@@ -29,6 +29,9 @@ spring:
         type:
           # Instant luu vao cot TIMESTAMP (gia tri UTC), khong dung TIMESTAMP WITH TIME ZONE
           preferred_instant_jdbc_type: TIMESTAMP
+  kafka:
+    # TransferCompleted/TransferFailed gui qua outbox len transfer.events (BANK-046)
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   flyway:
     locations: classpath:db/migration
   data:

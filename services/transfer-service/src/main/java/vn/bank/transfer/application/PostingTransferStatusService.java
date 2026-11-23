@@ -8,11 +8,14 @@ import vn.bank.common.error.BusinessException;
 import vn.bank.transfer.domain.Transfer;
 import vn.bank.transfer.domain.TransferErrorCode;
 import vn.bank.transfer.domain.TransferStatus;
+import vn.bank.transfer.infrastructure.messaging.TransferCompletedProducer;
+import vn.bank.transfer.infrastructure.messaging.TransferFailedProducer;
 import vn.bank.transfer.infrastructure.persistence.TransferRepository;
 
 /**
  * Ghi ket qua posting vao lenh, moi method mot transaction ngan. Tach khoi {@link ExecuteInternalTransferService} de
- * loi goi REST sang account-service nam ngoai transaction DB (muc 8 convention).
+ * loi goi REST sang account-service nam ngoai transaction DB (muc 8 convention). SUCCESS/FAILED ghi
+ * {@code TransferCompleted}/{@code TransferFailed} vao outbox trong cung transaction (BANK-046).
  */
 @Service
 @RequiredArgsConstructor
@@ -21,6 +24,8 @@ class PostingTransferStatusService {
     private static final int WRITE_TIMEOUT_SECONDS = 10;
 
     private final TransferRepository transferRepository;
+    private final TransferCompletedProducer transferCompletedProducer;
+    private final TransferFailedProducer transferFailedProducer;
     private final Clock clock;
 
     /** Posting da ghi: PROCESSING → SUCCESS. */
@@ -28,6 +33,7 @@ class PostingTransferStatusService {
     public Transfer markSucceeded(String transferId) {
         var transfer = getTransfer(transferId);
         transfer.changeStatus(TransferStatus.SUCCESS, clock);
+        transferCompletedProducer.send(transfer);
         return transfer;
     }
 
@@ -36,6 +42,7 @@ class PostingTransferStatusService {
     public Transfer markFailed(String transferId, TransferErrorCode failureCode) {
         var transfer = getTransfer(transferId);
         transfer.fail(failureCode.code(), clock);
+        transferFailedProducer.send(transfer);
         return transfer;
     }
 

@@ -65,6 +65,18 @@
             <artifactId>common-core</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- EventEnvelope, Topics, cau hinh Kafka JSON dung chung (TransferCompleted/TransferFailed, BANK-046) -->
+        <dependency>
+            <groupId>vn.bank</groupId>
+            <artifactId>common-events</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- Outbox (BANK-046): event ghi cung transaction nghiep vu, job gui len Kafka -->
+        <dependency>
+            <groupId>vn.bank</groupId>
+            <artifactId>common-outbox</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>

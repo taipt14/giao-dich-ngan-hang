@@ -81,8 +81,8 @@ class LockCustomerAccountsServiceTest {
                 .extracting(AccountStatusHistory::getReason)
                 .containsOnly("Customer locked: Nghi ngo gian lan");
         verify(accountRepository).flush();
-        // moi tai khoan mot event AccountStatusChanged sau commit
-        assertThat(TransactionSynchronizationManager.getSynchronizations()).hasSize(2);
+        // moi tai khoan mot event AccountStatusChanged, ghi outbox trong cung transaction
+        verify(producer, times(2)).send(any());
     }
 
     @Test

@@ -78,7 +78,10 @@ public class PostingService {
         ledgerEntryRepository.saveAll(entries);
         AccountFlusher.flush(accountRepository, "Accounts of journal " + journal.getId());
         accounts.keySet().forEach(balanceCacheEvictor::evictAfterCommit);
-        publishAfterCommit(journal, BalanceChange.of(journal, command.lines(), accounts));
+        // Outbox (BANK-046): so du doi va BalanceChanged cung commit hoac cung rollback
+        var changes = BalanceChange.of(journal, command.lines(), accounts);
+        changes.forEach(balanceChangedProducer::send);
+        logAfterCommit(journal, changes.size());
         return new PostingResult(journal, entries, true);
     }
 
@@ -121,8 +124,8 @@ public class PostingService {
         }
     }
 
-    // Muc 8 convention: khong gui Kafka trong transaction DB. Tam gui truc tiep sau commit, BANK-046 thay bang outbox
-    private void publishAfterCommit(Journal journal, List<BalanceChange> changes) {
+    // Moc nghiep vu chi log khi da commit
+    private void logAfterCommit(Journal journal, int changeCount) {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
@@ -131,8 +134,7 @@ public class PostingService {
                         journal.getId(),
                         journal.getReferenceType(),
                         journal.getReferenceId(),
-                        changes.size());
-                changes.forEach(balanceChangedProducer::send);
+                        changeCount);
             }
         });
     }

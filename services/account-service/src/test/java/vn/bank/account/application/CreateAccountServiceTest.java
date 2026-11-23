@@ -14,7 +14,6 @@ import java.time.ZoneOffset;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import vn.bank.account.domain.Account;
 import vn.bank.account.domain.AccountErrorCode;
@@ -61,31 +60,15 @@ class CreateAccountServiceTest {
     }
 
     @Test
-    void should_publishAccountOpenedOnlyAfterCommit_when_accountOpened() {
+    void should_writeAccountOpenedToOutboxInsideTransaction_when_accountOpened() {
         // given
         givenExistingAccounts(0);
 
         // when
         var account = createAccountService.create(HOLDER, AccountType.CURRENT);
 
-        // then
-        verify(accountOpenedProducer, never()).send(any());
-        TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+        // then: ghi outbox ngay trong transaction, khong doi afterCommit (rollback: AccountOutboxIT)
         verify(accountOpenedProducer).send(account);
-    }
-
-    @Test
-    void should_notPublishEvent_when_transactionRolledBack() {
-        // given
-        givenExistingAccounts(0);
-
-        // when
-        createAccountService.create(HOLDER, AccountType.CURRENT);
-        TransactionSynchronizationManager.getSynchronizations()
-                .forEach(sync -> sync.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
-
-        // then
-        verify(accountOpenedProducer, never()).send(any());
     }
 
     @Test

@@ -1,6 +1,7 @@
 package vn.bank.transfer.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.when;
 
 import java.time.Clock;
@@ -26,6 +27,8 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.client.RestClient;
+import vn.bank.common.events.EventJson;
+import vn.bank.common.events.Topics;
 import vn.bank.common.test.AbstractIntegrationTest;
 import vn.bank.transfer.application.OtpGenerator;
 import vn.bank.transfer.domain.BankZone;
@@ -48,6 +51,9 @@ class InternalTransferIT extends AbstractIntegrationTest {
     private static final Duration SLOWER_THAN_READ_TIMEOUT = Duration.ofSeconds(6);
     // Lan goi dau + 3 lan retry (bank.transfer.posting.max-retries)
     private static final int MAX_POSTING_ATTEMPTS = 4;
+    private static final Duration EVENT_TIMEOUT = Duration.ofSeconds(60);
+    // Kafka tam dung trong khoang nay: nhieu chu ky publisher (1 giay) ma event van NEW
+    private static final Duration KAFKA_DOWN_PERIOD = Duration.ofSeconds(5);
 
     private static final FakeAccountService ACCOUNT_SERVICE = FakeAccountService.start();
 
@@ -190,6 +196,111 @@ class InternalTransferIT extends AbstractIntegrationTest {
         assertThat(statusOf(transferId)).isEqualTo("UNKNOWN");
         assertThat(historyStatusesOf(transferId)).containsExactly("INITIATED", "OTP_PENDING", "PROCESSING", "UNKNOWN");
         assertThat(usedToday()).isEqualTo("30000000");
+    }
+
+    @Test
+    void should_publishTransferCompleted_when_internalTransferSucceeded() {
+        // given
+        var transferId = createTransfer();
+
+        try (var consumer = createKafkaTestConsumer(Topics.TRANSFER_EVENTS)) {
+            // when
+            confirm(transferId);
+
+            // then
+            var event = EventJson.mapper()
+                    .readTree(consumer.getRecordByKey(transferId, EVENT_TIMEOUT).value());
+            assertThat(event.get("eventType").asString()).isEqualTo("TransferCompleted");
+            assertThat(event.get("source").asString()).isEqualTo("transfer-service");
+            var payload = event.get("payload");
+            assertThat(payload.get("transferId").asString()).isEqualTo(transferId);
+            assertThat(payload.get("type").asString()).isEqualTo("INTERNAL");
+            assertThat(payload.get("cif").asString()).isEqualTo(cif);
+            assertThat(payload.get("sourceAccount").asString()).isEqualTo(sourceAccount);
+            assertThat(payload.get("destAccount").asString()).isEqualTo(destAccount);
+            assertThat(payload.get("amount").decimalValue()).isEqualByComparingTo(AMOUNT);
+            assertThat(payload.get("fee").decimalValue()).isEqualByComparingTo("0");
+            assertThat(payload.get("completedAt").asString()).isNotBlank();
+        }
+    }
+
+    @Test
+    void should_publishTransferFailedWithFailureCode_when_postingRejected() {
+        // given
+        var transferId = createTransfer();
+        ACCOUNT_SERVICE.givenAccount(sourceAccount, cif, "ACTIVE", "100000");
+
+        try (var consumer = createKafkaTestConsumer(Topics.TRANSFER_EVENTS)) {
+            // when
+            confirm(transferId);
+
+            // then
+            var event = EventJson.mapper()
+                    .readTree(consumer.getRecordByKey(transferId, EVENT_TIMEOUT).value());
+            assertThat(event.get("eventType").asString()).isEqualTo("TransferFailed");
+            var payload = event.get("payload");
+            assertThat(payload.get("transferId").asString()).isEqualTo(transferId);
+            assertThat(payload.get("status").asString()).isEqualTo("FAILED");
+            assertThat(payload.get("failureCode").asString()).isEqualTo("INSUFFICIENT_BALANCE");
+            assertThat(payload.get("amount").decimalValue()).isEqualByComparingTo(AMOUNT);
+        }
+    }
+
+    @Test
+    void should_notPublishAnyTransferEvent_when_transferUnknown() {
+        // given
+        var transferId = createTransfer();
+        ACCOUNT_SERVICE.givenPostingUnavailable(transferId);
+
+        // when
+        confirm(transferId);
+
+        // then: UNKNOWN chua phai ket qua cuoi, khong co dong outbox nao cho lenh
+        assertThat(outboxStatusOf(transferId)).isNull();
+    }
+
+    /**
+     * Tam dung container Kafka cua test (docker pause): broker khong tra loi, nhu Kafka chet. Giao dich van chay vi
+     * khong goi Kafka trong luong request; event nam NEW trong outbox va duoc gui khi Kafka chay lai.
+     */
+    @Test
+    void should_publishTransferCompletedAfterKafkaBack_when_kafkaDownDuringTransfer() {
+        // given
+        pauseKafka();
+        String transferId;
+        try {
+            // when
+            transferId = createTransfer();
+            var response = confirm(transferId);
+
+            // then
+            assertThat(response.getBody().status()).isEqualTo(TransferStatus.SUCCESS);
+            await().during(KAFKA_DOWN_PERIOD)
+                    .atMost(KAFKA_DOWN_PERIOD.plus(EVENT_TIMEOUT))
+                    .until(() -> "NEW".equals(outboxStatusOf(transferId)));
+        } finally {
+            unpauseKafka();
+        }
+        await().atMost(EVENT_TIMEOUT).until(() -> "SENT".equals(outboxStatusOf(transferId)));
+        try (var consumer = createKafkaTestConsumer(Topics.TRANSFER_EVENTS)) {
+            var event = EventJson.mapper()
+                    .readTree(consumer.getRecordByKey(transferId, EVENT_TIMEOUT).value());
+            assertThat(event.get("eventType").asString()).isEqualTo("TransferCompleted");
+        }
+    }
+
+    private static void pauseKafka() {
+        KAFKA.getDockerClient().pauseContainerCmd(KAFKA.getContainerId()).exec();
+    }
+
+    private static void unpauseKafka() {
+        KAFKA.getDockerClient().unpauseContainerCmd(KAFKA.getContainerId()).exec();
+    }
+
+    private String outboxStatusOf(String transferId) {
+        var statuses = jdbcTemplate.queryForList(
+                "SELECT STATUS FROM OUTBOX_EVENT WHERE AGGREGATE_ID = ?", String.class, transferId);
+        return statuses.isEmpty() ? null : statuses.getFirst();
     }
 
     private String createTransfer() {

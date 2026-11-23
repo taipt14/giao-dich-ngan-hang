@@ -15,7 +15,7 @@ import vn.bank.account.infrastructure.persistence.AccountStatusHistoryRepository
 
 /**
  * Buoc chung cua moi lan doi trang thai tai khoan (ADMIN goi API hoac khach hang bi khoa): doi trang thai, ghi
- * {@code ACCOUNT_STATUS_HISTORY}, phat {@code AccountStatusChanged} sau commit. Phai goi trong transaction cua use case.
+ * {@code ACCOUNT_STATUS_HISTORY}, ghi {@code AccountStatusChanged} vao outbox. Phai goi trong transaction cua use case.
  *
  * <p>Khong xoa cache {@code balance:{accountNo}}: cache chi luu so du, khong luu trang thai.
  */
@@ -31,12 +31,14 @@ class AccountStatusUpdater {
     AccountStatusChange changeStatus(Account account, AccountStatus target, String reason) {
         var change = account.changeStatus(target, reason, clock);
         accountStatusHistoryRepository.save(AccountStatusHistory.of(change));
-        publishAfterCommit(change);
+        // Outbox (BANK-046): ghi event cung transaction cua use case, rollback thi khong co event nao duoc gui
+        accountStatusChangedProducer.send(change);
+        logAfterCommit(change);
         return change;
     }
 
-    // Muc 8 convention: khong gui Kafka trong transaction DB. Tam gui truc tiep sau commit, BANK-046 thay bang outbox
-    private void publishAfterCommit(AccountStatusChange change) {
+    // Moc nghiep vu chi log khi da commit
+    private void logAfterCommit(AccountStatusChange change) {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
@@ -45,7 +47,6 @@ class AccountStatusUpdater {
                         change.maskedAccountNo(),
                         change.previousStatus(),
                         change.status());
-                accountStatusChangedProducer.send(change);
             }
         });
     }

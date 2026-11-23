@@ -8,11 +8,13 @@ import vn.bank.common.error.BusinessException;
 import vn.bank.transfer.domain.Transfer;
 import vn.bank.transfer.domain.TransferErrorCode;
 import vn.bank.transfer.domain.TransferStatus;
+import vn.bank.transfer.infrastructure.messaging.TransferFailedProducer;
 import vn.bank.transfer.infrastructure.persistence.TransferRepository;
 
 /**
  * Doc va doi trang thai lenh trong luong OTP, moi method mot transaction ngan. Tach khoi {@link ConfirmOtpService} va
  * {@link ResendOtpService} de thao tac Redis nam ngoai transaction DB, va de goi qua proxy (khong self-invocation).
+ * Lenh FAILED ghi {@code TransferFailed} vao outbox trong cung transaction (BANK-046).
  */
 @Service
 @RequiredArgsConstructor
@@ -21,6 +23,7 @@ class OtpTransferStatusService {
     private static final int WRITE_TIMEOUT_SECONDS = 10;
 
     private final TransferRepository transferRepository;
+    private final TransferFailedProducer transferFailedProducer;
     private final Clock clock;
 
     /**
@@ -63,6 +66,7 @@ class OtpTransferStatusService {
         var transfer = getTransfer(transferId);
         if (transfer.isAwaitingOtp()) {
             transfer.fail(failureCode.code(), clock);
+            transferFailedProducer.send(transfer);
         }
     }
 

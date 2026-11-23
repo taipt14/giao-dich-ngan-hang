@@ -18,7 +18,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
-import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import vn.bank.common.error.BusinessException;
 import vn.bank.customer.domain.Customer;
@@ -53,33 +52,17 @@ class ChangeCustomerStatusServiceTest {
     }
 
     @Test
-    void should_publishCustomerStatusChangedOnlyAfterCommit_when_statusChanged() {
+    void should_writeCustomerStatusChangedToOutboxInsideTransaction_when_statusChanged() {
         // given
         givenActiveCustomer();
 
         // when
         var customer = changeCustomerStatusService.changeStatus(CIF, CustomerStatus.LOCKED, REASON);
 
-        // then
+        // then: ghi outbox ngay trong transaction, khong doi afterCommit (rollback: CustomerOutboxIT)
         assertThat(customer.getStatus()).isEqualTo(CustomerStatus.LOCKED);
         verify(customerRepository).flush();
-        verify(producer, never()).send(any());
-        TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
         verify(producer).send(new CustomerStatusChange(CIF, CustomerStatus.ACTIVE, CustomerStatus.LOCKED, REASON, NOW));
-    }
-
-    @Test
-    void should_notPublishEvent_when_transactionRolledBack() {
-        // given
-        givenActiveCustomer();
-
-        // when
-        changeCustomerStatusService.changeStatus(CIF, CustomerStatus.LOCKED, REASON);
-        TransactionSynchronizationManager.getSynchronizations()
-                .forEach(sync -> sync.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
-
-        // then
-        verify(producer, never()).send(any());
     }
 
     @Test
@@ -96,6 +79,7 @@ class ChangeCustomerStatusServiceTest {
         assertThat(thrown).isInstanceOf(BusinessException.class).hasCause(lockFailure);
         assertThat(((BusinessException) thrown).getErrorCode()).isEqualTo(CustomerErrorCode.CONCURRENT_MODIFICATION);
         assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty();
+        verify(producer, never()).send(any());
     }
 
     private void givenActiveCustomer() {

@@ -30,7 +30,9 @@ public class RegisterCustomerService {
         ensureNotRegistered(profile);
         var cif = Cif.fromSequence(customerRepository.nextCifSequence());
         var customer = customerRepository.save(Customer.register(cif, profile, clock));
-        publishAfterCommit(customer);
+        // Outbox (BANK-046): ghi event cung transaction, rollback thi khong co event nao duoc gui
+        customerCreatedProducer.send(customer);
+        logAfterCommit(customer);
         return customer;
     }
 
@@ -46,13 +48,12 @@ public class RegisterCustomerService {
         }
     }
 
-    // Muc 8 convention: khong gui Kafka trong transaction DB. Tam gui truc tiep sau commit, BANK-046 thay bang outbox
-    private void publishAfterCommit(Customer customer) {
+    // Moc nghiep vu chi log khi da commit
+    private void logAfterCommit(Customer customer) {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
                 log.info("Customer {} registered, id number {}", customer.getCif(), customer.getMaskedIdNumber());
-                customerCreatedProducer.send(customer);
             }
         });
     }
