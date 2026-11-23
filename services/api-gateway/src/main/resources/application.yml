@@ -11,6 +11,14 @@ spring:
           jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/bank/protocol/openid-connect/certs}
           # Chi nhan token cap cho gateway (client bank-gateway trong realm bank)
           audiences: bank-gateway
+  data:
+    redis:
+      # Redis chi dung cho rate limit (BANK-012)
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      # Redis cham/chet khong duoc giu request lau: het thoi gian → rate limit bo qua (fail-open)
+      connect-timeout: 500ms
+      timeout: 500ms
   cloud:
     gateway:
       server:
@@ -19,19 +27,53 @@ spring:
             # Don vi ms. Service phia sau khong ket noi duoc / khong tra loi kip → gateway tra 503
             connect-timeout: 2000
             response-timeout: 10s
+          filter:
+            request-rate-limiter:
+              # Vuot han muc → nem loi de GatewayErrorWebExceptionHandler tra 429 theo ErrorResponse
+              throw-on-limit: true
+          # Rate limit theo user id (claim sub): toi da "limit" request trong moi cua so truot "window", dem rieng tung
+          # route. Bean slidingWindowRateLimiter xem RateLimitConfig.
           routes:
             - id: customer-service
               uri: ${CUSTOMER_SERVICE_URI:http://localhost:8081}
               predicates:
                 - Path=/api/v1/customers/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@principalNameKeyResolver}"
+                    rate-limiter: "#{@slidingWindowRateLimiter}"
+                    sliding-window-rate-limiter.limit: 100
+                    sliding-window-rate-limiter.window: 1m
             - id: account-service
               uri: ${ACCOUNT_SERVICE_URI:http://localhost:8082}
               predicates:
                 - Path=/api/v1/accounts/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@principalNameKeyResolver}"
+                    rate-limiter: "#{@slidingWindowRateLimiter}"
+                    sliding-window-rate-limiter.limit: 100
+                    sliding-window-rate-limiter.window: 1m
             - id: transfer-service
               uri: ${TRANSFER_SERVICE_URI:http://localhost:8084}
               predicates:
                 - Path=/api/v1/transfers/**
+              filters:
+                # API chuyen khoan han muc chat hon
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@principalNameKeyResolver}"
+                    rate-limiter: "#{@slidingWindowRateLimiter}"
+                    sliding-window-rate-limiter.limit: 10
+                    sliding-window-rate-limiter.window: 1m
+
+management:
+  health:
+    redis:
+      # Gateway van phuc vu khi Redis chet (rate limit fail-open) nen Redis khong lam health DOWN
+      enabled: false
 
 server:
   port: 8080

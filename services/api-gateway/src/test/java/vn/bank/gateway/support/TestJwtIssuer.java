@@ -75,23 +75,28 @@ public final class TestJwtIssuer implements AutoCloseable {
 
     /** Token hop le cua customer01: role CUSTOMER, claim cif. */
     public String customerToken() {
-        return sign(customerClaims(clock.instant().plus(TOKEN_LIFESPAN), GATEWAY_AUDIENCE));
+        return customerToken(CUSTOMER_SUBJECT);
+    }
+
+    /** Token hop le cua mot customer khac voi user id (claim {@code sub}) cho truoc. */
+    public String customerToken(String subject) {
+        return sign(customerClaims(clock.instant().plus(TOKEN_LIFESPAN), GATEWAY_AUDIENCE, subject));
     }
 
     public String expiredCustomerToken() {
         var expiredAt = clock.instant().minus(Duration.ofMinutes(10));
-        return sign(customerClaims(expiredAt, GATEWAY_AUDIENCE));
+        return sign(customerClaims(expiredAt, GATEWAY_AUDIENCE, CUSTOMER_SUBJECT));
     }
 
     public String customerTokenForAudience(String audience) {
-        return sign(customerClaims(clock.instant().plus(TOKEN_LIFESPAN), audience));
+        return sign(customerClaims(clock.instant().plus(TOKEN_LIFESPAN), audience, CUSTOMER_SUBJECT));
     }
 
-    private JWTClaimsSet customerClaims(Instant expiresAt, String audience) {
+    private JWTClaimsSet customerClaims(Instant expiresAt, String audience, String subject) {
         return new JWTClaimsSet.Builder()
                 .issuer(ISSUER)
                 .audience(audience)
-                .subject(CUSTOMER_SUBJECT)
+                .subject(subject)
                 .issueTime(Date.from(expiresAt.minus(TOKEN_LIFESPAN)))
                 .expirationTime(Date.from(expiresAt))
                 .claim("cif", CUSTOMER_CIF)

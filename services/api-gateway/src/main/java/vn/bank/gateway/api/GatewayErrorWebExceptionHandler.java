@@ -8,10 +8,12 @@ import org.springframework.boot.webflux.error.ErrorWebExceptionHandler;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import vn.bank.common.error.CommonErrorCode;
+import vn.bank.gateway.domain.GatewayErrorCode;
 
 /**
  * Ranh gioi xu ly loi cua gateway (thay {@code GlobalExceptionHandler} chi danh cho servlet). Chay truoc handler mac
@@ -25,6 +27,7 @@ class GatewayErrorWebExceptionHandler implements ErrorWebExceptionHandler {
 
     static final String SERVICE_UNAVAILABLE_MESSAGE = "Downstream service is unavailable";
     static final String INTERNAL_ERROR_MESSAGE = "Internal server error";
+    static final String RATE_LIMIT_EXCEEDED_MESSAGE = "Too many requests, please retry later";
 
     private final ErrorResponseWriter errorResponseWriter;
 
@@ -37,6 +40,13 @@ class GatewayErrorWebExceptionHandler implements ErrorWebExceptionHandler {
         if (isDownstreamUnavailable(ex)) {
             log.warn("Downstream service unavailable for {}: {}", path, ex.getMessage());
             return errorResponseWriter.write(exchange, HttpStatus.SERVICE_UNAVAILABLE, SERVICE_UNAVAILABLE_MESSAGE);
+        }
+        if (ex instanceof HttpClientErrorException.TooManyRequests) {
+            // RequestRateLimiter bat throw-on-limit nem loi nay khi user vuot han muc request
+            log.warn("Rate limit exceeded for {}", path);
+            var code = GatewayErrorCode.RATE_LIMIT_EXCEEDED;
+            return errorResponseWriter.write(
+                    exchange, HttpStatus.valueOf(code.httpStatus()), code.code(), RATE_LIMIT_EXCEEDED_MESSAGE);
         }
         if (ex instanceof ResponseStatusException statusException) {
             return handleStatus(exchange, path, statusException);
