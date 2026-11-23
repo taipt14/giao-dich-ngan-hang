@@ -33,7 +33,13 @@ public enum TransferErrorCode implements ErrorCode {
     OTP_RESEND_TOO_SOON(429),
     OTP_RESEND_LIMIT_EXCEEDED(422),
     // Redis loi o luong OTP bat buoc (muc 12 convention)
-    OTP_STORE_UNAVAILABLE(503);
+    OTP_STORE_UNAVAILABLE(503),
+    // So tien lenh vuot han muc moi lenh cua loai khach hang (BANK-043)
+    PER_TRANSACTION_LIMIT_EXCEEDED(422),
+    // Tong da chuyen trong ngay cong lenh nay vuot han muc ngay; luc xac thuc OTP thi lenh FAILED voi ma nay
+    DAILY_LIMIT_EXCEEDED(422),
+    // Redis loi khi giu cho han muc ngay (luong bat buoc, muc 12 convention)
+    TRANSFER_LIMIT_STORE_UNAVAILABLE(503);
 
     private final int httpStatus;
 

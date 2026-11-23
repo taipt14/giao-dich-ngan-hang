@@ -22,6 +22,7 @@ import vn.bank.common.error.BusinessException;
 import vn.bank.common.error.ErrorCode;
 import vn.bank.common.error.TechnicalException;
 import vn.bank.transfer.domain.AccountSnapshot;
+import vn.bank.transfer.domain.NewTransfer;
 import vn.bank.transfer.domain.OtpHash;
 import vn.bank.transfer.domain.Transfer;
 import vn.bank.transfer.domain.TransferErrorCode;
@@ -49,11 +50,13 @@ class CreateTransferServiceTest {
     private final OtpGenerator otpGenerator = mock(OtpGenerator.class);
     private final OtpStore otpStore = mock(OtpStore.class);
     private final OtpSender otpSender = mock(OtpSender.class);
+    private final TransferLimitService transferLimitService = mock(TransferLimitService.class);
     private final CreateTransferService service = new CreateTransferService(
             idempotencyStore,
             accountClient,
             transferRepository,
             new TransferFeeEstimator(),
+            transferLimitService,
             otpGenerator,
             otpStore,
             otpSender,
@@ -330,6 +333,40 @@ class CreateTransferServiceTest {
         // then
         assertThat(thrown).isInstanceOf(TechnicalException.class);
         verify(idempotencyStore).release(CIF, KEY);
+    }
+
+    @Test
+    void should_rejectWithPerTransactionLimitExceededAndReleaseKey_when_amountOverLimit() {
+        // given
+        givenKeyAcquired();
+        doThrow(new BusinessException(TransferErrorCode.PER_TRANSACTION_LIMIT_EXCEEDED, "over"))
+                .when(transferLimitService)
+                .checkCanCreate(any(NewTransfer.class));
+
+        // when
+        var thrown = catchThrowable(() -> service.create(command(SOURCE, DEST, null, "100000000.01")));
+
+        // then: khong goi account-service, khong sinh OTP, client sua lenh roi gui lai cung key duoc
+        assertErrorCode(thrown, TransferErrorCode.PER_TRANSACTION_LIMIT_EXCEEDED);
+        verify(accountClient, never()).findAccount(anyString());
+        verify(otpStore, never()).issue(anyString(), anyString());
+        verify(transferRepository, never()).saveAndFlush(any(Transfer.class));
+        verify(idempotencyStore).release(CIF, KEY);
+    }
+
+    @Test
+    void should_returnExistingTransferWithoutCheckingLimit_when_sameRequestReplayed() {
+        // given: lenh cu da tinh vao han muc ngay, gui lai khong duoc bao vuot han muc
+        var existing = existingTransfer("500000");
+        givenKeyAcquired();
+        when(transferRepository.findByCifAndIdempotencyKey(CIF, KEY)).thenReturn(Optional.of(existing));
+
+        // when
+        var result = service.create(command(SOURCE, DEST, null, "500000"));
+
+        // then
+        assertThat(result.transfer()).isSameAs(existing);
+        verify(transferLimitService, never()).checkCanCreate(any(NewTransfer.class));
     }
 
     private void givenKeyAcquired() {

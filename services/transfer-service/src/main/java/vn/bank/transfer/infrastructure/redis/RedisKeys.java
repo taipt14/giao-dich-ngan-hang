@@ -1,5 +1,8 @@
 package vn.bank.transfer.infrastructure.redis;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
 /** Key Redis cua transfer-service (muc 3.3, 12 convention; muc 6 kien-truc.md). */
 public final class RedisKeys {
 
@@ -8,8 +11,17 @@ public final class RedisKeys {
     private static final String OTP_FAIL = "otp:fail:%s";
     private static final String OTP_RESEND = "otp:resend:%s";
     private static final String OTP_COOLDOWN = "otp:cooldown:%s";
+    private static final String DAILY_LIMIT = "limit:%s:%s";
 
     private RedisKeys() {}
+
+    /**
+     * Tong tien da giu cho han muc cua tai khoan nguon trong ngay nghiep vu {@code day} (dinh dang yyyyMMdd), song den
+     * 00:00 ngay hom sau gio Viet Nam.
+     */
+    public static String dailyLimit(String accountNo, LocalDate day) {
+        return DAILY_LIMIT.formatted(accountNo, day.format(DateTimeFormatter.BASIC_ISO_DATE));
+    }
 
     /**
      * Idempotency-Key cua request tao lenh; clientId la CIF cua khach hang (cung khoa voi UK_TRANSFER_CIF_IDEM_KEY).

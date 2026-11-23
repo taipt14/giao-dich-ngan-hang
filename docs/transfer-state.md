@@ -10,7 +10,7 @@ stateDiagram-v2
     [*] --> INITIATED: tạo lệnh (BANK-041)
     INITIATED --> OTP_PENDING: sinh và gửi OTP (BANK-042)
     OTP_PENDING --> PROCESSING: OTP đúng (BANK-042)
-    OTP_PENDING --> FAILED: sai OTP quá số lần (OTP_MAX_ATTEMPTS)
+    OTP_PENDING --> FAILED: sai OTP quá số lần (OTP_MAX_ATTEMPTS) / OTP đúng nhưng vượt hạn mức ngày (DAILY_LIMIT_EXCEEDED, BANK-043)
 
     PROCESSING --> SUCCESS: posting nội bộ thành công (BANK-045)
     PROCESSING --> FAILED: lỗi nghiệp vụ khi posting (BANK-045, BANK-052)

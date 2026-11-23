@@ -89,4 +89,20 @@ class TransferStatusTest {
         // then
         assertThat(result).isFalse();
     }
+
+    @ParameterizedTest
+    @EnumSource(TransferStatus.class)
+    void should_holdOrReleaseDailyLimitByStatus_when_checkingEveryStatus(TransferStatus status) {
+        // given: da xac thuc OTP va chua hoan → giu; FAILED/REVERSED → hoan; chua xac thuc OTP → khong lien quan
+        var holding = Set.of(PROCESSING, PENDING_NAPAS, UNKNOWN, SUCCESS);
+        var releasing = Set.of(FAILED, REVERSED);
+
+        // when
+        var holds = status.holdsDailyLimit();
+        var releases = status.releasesDailyLimit();
+
+        // then
+        assertThat(holds).isEqualTo(holding.contains(status));
+        assertThat(releases).isEqualTo(releasing.contains(status));
+    }
 }

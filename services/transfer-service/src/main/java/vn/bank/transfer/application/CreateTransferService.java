@@ -36,6 +36,7 @@ public class CreateTransferService {
     private final AccountClient accountClient;
     private final TransferRepository transferRepository;
     private final TransferFeeEstimator transferFeeEstimator;
+    private final TransferLimitService transferLimitService;
     private final OtpGenerator otpGenerator;
     private final OtpStore otpStore;
     private final OtpSender otpSender;
@@ -45,7 +46,8 @@ public class CreateTransferService {
      * Lenh noi bo cho chinh tai khoan nguon → {@code SAME_ACCOUNT_TRANSFER}; tai khoan nguon khong thuoc {@code cif} →
      * {@code SOURCE_ACCOUNT_ACCESS_DENIED}; tai khoan dich noi bo khong ton tai / khong ACTIVE →
      * {@code DEST_ACCOUNT_NOT_FOUND} / {@code DEST_ACCOUNT_NOT_ACTIVE}; request cung key dang xu ly →
-     * {@code IDEMPOTENCY_KEY_IN_PROGRESS}.
+     * {@code IDEMPOTENCY_KEY_IN_PROGRESS}; vuot han muc moi lenh / han muc ngay →
+     * {@code PER_TRANSACTION_LIMIT_EXCEEDED} / {@code DAILY_LIMIT_EXCEEDED} (chi kiem tra, giu cho luc xac thuc OTP).
      */
     public CreateTransferResult create(CreateTransferCommand command) {
         var fee = transferFeeEstimator.estimate(TransferType.of(command.destBankCode()), command.amount());
@@ -87,6 +89,8 @@ public class CreateTransferService {
         if (existing.isPresent()) {
             return replay(request, existing.get());
         }
+        // Sau buoc tra lenh cu: lenh da tao (da tinh vao han muc) gui lai cung key khong bi bao vuot han muc
+        transferLimitService.checkCanCreate(request);
         requireAccounts(request);
         var otp = issueOtp(transfer);
         try {

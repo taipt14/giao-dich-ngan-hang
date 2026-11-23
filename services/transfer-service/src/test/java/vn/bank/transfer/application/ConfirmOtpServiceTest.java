@@ -2,7 +2,9 @@ package vn.bank.transfer.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -11,7 +13,9 @@ import static org.mockito.Mockito.when;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import vn.bank.common.error.BusinessException;
 import vn.bank.common.error.ErrorCode;
@@ -34,7 +38,9 @@ class ConfirmOtpServiceTest {
 
     private final OtpTransferStatusService otpTransferStatusService = mock(OtpTransferStatusService.class);
     private final OtpStore otpStore = mock(OtpStore.class);
-    private final ConfirmOtpService service = new ConfirmOtpService(otpTransferStatusService, otpStore);
+    private final TransferLimitService transferLimitService = mock(TransferLimitService.class);
+    private final ConfirmOtpService service =
+            new ConfirmOtpService(otpTransferStatusService, otpStore, transferLimitService);
 
     @Test
     void should_moveTransferToProcessing_when_otpCorrect() {
@@ -42,6 +48,7 @@ class ConfirmOtpServiceTest {
         var processing = transferIn(TransferStatus.PROCESSING);
         givenAwaitingOtp();
         when(otpStore.verify(TRANSFER_ID, OTP_HASH)).thenReturn(new OtpVerification(Outcome.VERIFIED, 0));
+        givenLimitReserved();
         when(otpTransferStatusService.markOtpVerified(TRANSFER_ID)).thenReturn(processing);
 
         // when
@@ -49,6 +56,55 @@ class ConfirmOtpServiceTest {
 
         // then
         assertThat(transfer.getStatus()).isEqualTo(TransferStatus.PROCESSING);
+        verify(transferLimitService, never()).cancel(any(DailyLimitReservation.class));
+    }
+
+    @Test
+    void should_failTransferWithDailyLimitExceeded_when_otpCorrectButDailyLimitUsedUp() {
+        // given
+        givenAwaitingOtp();
+        when(otpStore.verify(TRANSFER_ID, OTP_HASH)).thenReturn(new OtpVerification(Outcome.VERIFIED, 0));
+        when(transferLimitService.tryReserve(any(Transfer.class))).thenReturn(Optional.empty());
+
+        // when
+        var thrown = catchThrowable(() -> service.confirm(TRANSFER_ID, CIF, OTP));
+
+        // then: lenh FAILED, khong sang PROCESSING
+        assertErrorCode(thrown, TransferErrorCode.DAILY_LIMIT_EXCEEDED);
+        verify(otpTransferStatusService).failByDailyLimitExceeded(TRANSFER_ID);
+        verify(otpTransferStatusService, never()).markOtpVerified(anyString());
+        verify(otpStore).discard(TRANSFER_ID);
+    }
+
+    @Test
+    void should_cancelReservation_when_transferCannotMoveToProcessing() {
+        // given
+        givenAwaitingOtp();
+        when(otpStore.verify(TRANSFER_ID, OTP_HASH)).thenReturn(new OtpVerification(Outcome.VERIFIED, 0));
+        var reservation = givenLimitReserved();
+        doThrow(new IllegalStateException("DB down"))
+                .when(otpTransferStatusService)
+                .markOtpVerified(TRANSFER_ID);
+
+        // when
+        var thrown = catchThrowable(() -> service.confirm(TRANSFER_ID, CIF, OTP));
+
+        // then
+        assertThat(thrown).isInstanceOf(IllegalStateException.class);
+        verify(transferLimitService).cancel(reservation);
+    }
+
+    @Test
+    void should_notReserveLimit_when_otpWrong() {
+        // given
+        givenAwaitingOtp();
+        when(otpStore.verify(TRANSFER_ID, OTP_HASH)).thenReturn(new OtpVerification(Outcome.MISMATCH, 1));
+
+        // when
+        catchThrowable(() -> service.confirm(TRANSFER_ID, CIF, OTP));
+
+        // then
+        verify(transferLimitService, never()).tryReserve(any(Transfer.class));
     }
 
     @Test
@@ -107,6 +163,13 @@ class ConfirmOtpServiceTest {
         // then
         assertErrorCode(thrown, TransferErrorCode.TRANSFER_NOT_AWAITING_OTP);
         verify(otpStore, never()).verify(anyString(), anyString());
+    }
+
+    private DailyLimitReservation givenLimitReserved() {
+        var reservation =
+                new DailyLimitReservation("100000000001", LocalDate.of(2026, 11, 23), new BigDecimal("500000.00"));
+        when(transferLimitService.tryReserve(any(Transfer.class))).thenReturn(Optional.of(reservation));
+        return reservation;
     }
 
     private void givenAwaitingOtp() {

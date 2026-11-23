@@ -50,9 +50,19 @@ class OtpTransferStatusService {
     /** Sai OTP den so lan toi da: OTP_PENDING → FAILED ({@code OTP_MAX_ATTEMPTS}); lenh da FAILED thi giu nguyen. */
     @Transactional(timeout = WRITE_TIMEOUT_SECONDS)
     public void failByOtpMaxAttempts(String transferId) {
+        failIfAwaitingOtp(transferId, TransferErrorCode.OTP_MAX_ATTEMPTS);
+    }
+
+    /** OTP dung nhung vuot han muc ngay: OTP_PENDING → FAILED ({@code DAILY_LIMIT_EXCEEDED}); da FAILED thi giu nguyen. */
+    @Transactional(timeout = WRITE_TIMEOUT_SECONDS)
+    public void failByDailyLimitExceeded(String transferId) {
+        failIfAwaitingOtp(transferId, TransferErrorCode.DAILY_LIMIT_EXCEEDED);
+    }
+
+    private void failIfAwaitingOtp(String transferId, TransferErrorCode failureCode) {
         var transfer = getTransfer(transferId);
         if (transfer.isAwaitingOtp()) {
-            transfer.fail(TransferErrorCode.OTP_MAX_ATTEMPTS.code(), clock);
+            transfer.fail(failureCode.code(), clock);
         }
     }
 
