@@ -4,7 +4,7 @@ epic: E1
 title: customer-service: tra cứu, cập nhật và đổi trạng thái khách hàng
 priority: Medium
 depends_on: [BANK-013]
-status: TODO
+status: DONE
 ---
 
 # BANK-014: customer-service: tra cứu, cập nhật và đổi trạng thái khách hàng

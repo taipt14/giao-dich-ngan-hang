@@ -4,7 +4,7 @@ epic: E1
 title: API Gateway: routing và xác thực JWT
 priority: High
 depends_on: [BANK-010]
-status: TODO
+status: DONE
 ---
 
 # BANK-011: API Gateway: routing và xác thực JWT

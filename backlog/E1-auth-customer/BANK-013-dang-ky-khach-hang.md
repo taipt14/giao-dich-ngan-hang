@@ -4,7 +4,7 @@ epic: E1
 title: customer-service: đăng ký khách hàng (CIF)
 priority: High
 depends_on: [BANK-003, BANK-004, BANK-005]
-status: TODO
+status: DONE
 ---
 
 # BANK-013: customer-service: đăng ký khách hàng (CIF)

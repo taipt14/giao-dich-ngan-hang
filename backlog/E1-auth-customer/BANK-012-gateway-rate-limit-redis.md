@@ -4,7 +4,7 @@ epic: E1
 title: Rate limit tại gateway bằng Redis
 priority: Medium
 depends_on: [BANK-011]
-status: TODO
+status: DONE
 ---
 
 # BANK-012: Rate limit tại gateway bằng Redis
