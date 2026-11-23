@@ -4,7 +4,7 @@ epic: E1
 title: Keycloak: realm, client và role
 priority: High
 depends_on: [BANK-002]
-status: TODO
+status: DONE
 ---
 
 # BANK-010: Keycloak: realm, client và role

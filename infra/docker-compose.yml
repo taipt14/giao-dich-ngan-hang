@@ -1,4 +1,4 @@
-# Ha tang local cho he thong giao dich ngan hang: Oracle, Kafka (KRaft), Kafka UI, Redis.
+# Ha tang local cho he thong giao dich ngan hang: Oracle, Kafka (KRaft), Kafka UI, Redis, Keycloak.
 # Bien moi truong doc tu infra/.env (copy tu infra/.env.example). Huong dan: infra/README.md
 name: giao-dich-ngan-hang
 
@@ -85,6 +85,30 @@ services:
       interval: 10s
       timeout: 5s
       retries: 6
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.6.4
+    # start-dev: HTTP, luu du lieu bang file H2 noi bo cua Keycloak (chi dung local).
+    # --import-realm: doc /opt/keycloak/data/import luc khoi dong, bo qua neu realm da ton tai
+    command: ["start-dev", "--import-realm"]
+    ports:
+      - "8180:8080"
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:?KEYCLOAK_ADMIN_USERNAME is required}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
+      KC_HEALTH_ENABLED: "true"
+      # Keycloak thay placeholder ${...} trong file realm bang bien moi truong khi import
+      KEYCLOAK_CUSTOMER01_PASSWORD: ${KEYCLOAK_CUSTOMER01_PASSWORD:?KEYCLOAK_CUSTOMER01_PASSWORD is required}
+      KEYCLOAK_ADMIN01_PASSWORD: ${KEYCLOAK_ADMIN01_PASSWORD:?KEYCLOAK_ADMIN01_PASSWORD is required}
+    volumes:
+      - ./keycloak/realm-bank.json:/opt/keycloak/data/import/realm-bank.json:ro
+    healthcheck:
+      # Image khong co curl/wget: goi endpoint health (management port 9000) bang /dev/tcp cua bash
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000 && printf 'GET /health/ready HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && grep -q '\"status\": \"UP\"' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
 volumes:
   oracle-data:

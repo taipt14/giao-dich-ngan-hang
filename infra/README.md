@@ -8,6 +8,7 @@
 | `kafka` | `apache/kafka:3.9.1` | 9092 | KRaft, 1 broker (broker + controller) |
 | `kafka-ui` | `provectuslabs/kafka-ui:v0.7.2` | 8090 | Xem broker, topic, message |
 | `redis` | `redis:7.4-alpine` | 6379 | Chỉ là cache/lock, không phải nguồn dữ liệu gốc |
+| `keycloak` | `quay.io/keycloak/keycloak:26.6.4` | 8180 | Realm `bank` (OAuth2/JWT), tự import khi khởi động |
 
 Yêu cầu: Docker Desktop (hoặc Docker Engine) có Compose v2, cấp cho Docker tối thiểu 4 GB RAM (Oracle cần ~2 GB).
 
@@ -73,6 +74,70 @@ docker compose -f infra/docker-compose.yml exec oracle bash -c \
 docker compose -f infra/docker-compose.yml exec redis redis-cli ping
 ```
 
+### Keycloak
+
+- Admin console: <http://localhost:8180>, đăng nhập bằng `KEYCLOAK_ADMIN_USERNAME` / `KEYCLOAK_ADMIN_PASSWORD`
+  trong `infra/.env` (realm `master`).
+- Chạy chế độ `start-dev` (HTTP, dữ liệu Keycloak lưu trong container, chỉ dùng local).
+- Khi khởi động, Keycloak import realm `bank` từ `infra/keycloak/realm-bank.json`. Realm đã tồn tại thì bỏ qua
+  (không ghi đè). Sửa file realm → tạo lại container để import lại:
+  `docker compose -f infra/docker-compose.yml up -d --wait --force-recreate keycloak`.
+- Issuer của token: `http://localhost:8180/realms/bank`
+  (discovery: <http://localhost:8180/realms/bank/.well-known/openid-configuration>).
+
+Nội dung realm `bank`:
+
+| Loại | Tên | Ghi chú |
+|---|---|---|
+| Realm role | `CUSTOMER` | Khách hàng |
+| Realm role | `ADMIN` | Nhân viên vận hành |
+| Client | `bank-web` | Public, chỉ bật password grant (Direct Access Grants) để lấy token khi test. Token có `aud` = `bank-gateway` và claim `cif` |
+| Client | `bank-gateway` | Confidential, không bật flow nào: đại diện cho api-gateway (resource server), dùng làm audience của token |
+| User | `customer01` | Role `CUSTOMER`, attribute `cif` = `C000000001`. Mật khẩu: `KEYCLOAK_CUSTOMER01_PASSWORD` |
+| User | `admin01` | Role `ADMIN`, không có `cif`. Mật khẩu: `KEYCLOAK_ADMIN01_PASSWORD` |
+
+Mật khẩu user mẫu không nằm trong file realm: file chứa placeholder `${KEYCLOAK_CUSTOMER01_PASSWORD}`,
+`${KEYCLOAK_ADMIN01_PASSWORD}`, Keycloak thay bằng biến môi trường lúc import. Đổi mật khẩu trong `infra/.env`
+chỉ có tác dụng khi realm được import lại (tạo lại container `keycloak`).
+
+Lấy access token của `customer01` (chạy từ thư mục gốc của repo, Git Bash/Linux/macOS):
+
+```bash
+# Nạp mật khẩu từ infra/.env
+set -a; . infra/.env; set +a
+
+TOKEN=$(curl -s -X POST http://localhost:8180/realms/bank/protocol/openid-connect/token \
+  -d grant_type=password \
+  -d client_id=bank-web \
+  -d username=customer01 \
+  --data-urlencode "password=${KEYCLOAK_CUSTOMER01_PASSWORD}" \
+  | sed -E 's/.*"access_token":"([^"]+)".*/\1/')
+```
+
+Decode phần payload của token (base64url) để xem role và claim `cif`:
+
+```bash
+PAYLOAD=$(echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+')
+while [ $(( ${#PAYLOAD} % 4 )) -ne 0 ]; do PAYLOAD="${PAYLOAD}="; done
+echo "$PAYLOAD" | base64 -d; echo
+```
+
+Kết quả (rút gọn) có:
+
+```json
+{
+  "iss": "http://localhost:8180/realms/bank",
+  "aud": "bank-gateway",
+  "azp": "bank-web",
+  "realm_access": { "roles": ["CUSTOMER"] },
+  "cif": "C000000001",
+  "preferred_username": "customer01"
+}
+```
+
+Token sống 5 phút (`accessTokenLifespan` = 300 giây). Lấy token của `admin01` tương tự với
+`username=admin01` và `KEYCLOAK_ADMIN01_PASSWORD`: `realm_access.roles` là `["ADMIN"]`, không có claim `cif`.
+
 ## Reset dữ liệu
 
 Xóa toàn bộ dữ liệu Oracle và Kafka (volume `oracle-data`, `kafka-data` của project này) rồi khởi động lại từ đầu.
@@ -136,5 +201,6 @@ testcontainers.reuse.enable=true
 |---|---|
 | `ORACLE_PASSWORD is required` khi `up` | Chưa tạo `infra/.env` từ `infra/.env.example` |
 | Oracle không lên `healthy` | Docker thiếu RAM; xem `docker compose -f infra/docker-compose.yml logs oracle` |
-| `bind: address already in use` | Port 1521/9092/6379/8090 đang bị chương trình khác dùng |
+| `bind: address already in use` | Port 1521/9092/6379/8090/8180 đang bị chương trình khác dùng |
+| Lấy token báo `invalid_grant` | Sai mật khẩu, hoặc đã đổi mật khẩu trong `infra/.env` nhưng chưa tạo lại container `keycloak` |
 | Script init báo `$'\r': command not found` | File `.sh` bị đổi sang CRLF; `infra/.gitattributes` ép LF, checkout lại file |
