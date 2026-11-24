@@ -18,7 +18,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
-import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import vn.bank.account.domain.Account;
 import vn.bank.account.domain.AccountErrorCode;
@@ -78,16 +77,14 @@ class ChangeAccountStatusServiceTest {
     }
 
     @Test
-    void should_publishAccountStatusChangedOnlyAfterCommit_when_statusChanged() {
+    void should_writeAccountStatusChangedToOutboxInsideTransaction_when_statusChanged() {
         // given
         givenAccount();
 
         // when
         service.changeStatus(ACCOUNT_NO, AccountStatus.LOCKED, REASON);
 
-        // then
-        verify(producer, never()).send(any());
-        TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+        // then: ghi outbox ngay trong transaction, khong doi afterCommit
         verify(producer)
                 .send(new AccountStatusChange(
                         ACCOUNT_NO, CIF, AccountStatus.ACTIVE, AccountStatus.LOCKED, REASON, NOW));

@@ -2,28 +2,28 @@ package vn.bank.customer.infrastructure.messaging;
 
 import java.time.Clock;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import vn.bank.common.events.EventEnvelope;
 import vn.bank.common.events.Topics;
 import vn.bank.common.events.customer.CustomerStatusChanged;
+import vn.bank.common.outbox.OutboxWriter;
 import vn.bank.common.web.GlobalExceptionHandler;
 import vn.bank.customer.domain.CustomerStatusChange;
 
-/** Gui {@code CustomerStatusChanged} len {@code customer.events}, key = CIF de giu thu tu event theo khach hang. */
-@Slf4j
+/**
+ * Phat {@code CustomerStatusChanged} len {@code customer.events} qua outbox (BANK-046), key = CIF de giu thu tu event
+ * theo khach hang. Phai goi trong transaction doi trang thai: event chi duoc gui khi transaction commit.
+ */
 @Component
 @RequiredArgsConstructor
 public class CustomerStatusChangedProducer {
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final OutboxWriter outboxWriter;
     private final CustomerEventMapper customerEventMapper;
     private final Clock clock;
 
     public void send(CustomerStatusChange change) {
-        var cif = change.cif();
         // Chua co tracing (BANK-070): lay traceId tu MDC neu co, khong co thi null
         var traceId = MDC.get(GlobalExceptionHandler.TRACE_ID_MDC_KEY);
         var event = EventEnvelope.of(
@@ -32,13 +32,6 @@ public class CustomerStatusChangedProducer {
                 traceId,
                 customerEventMapper.toCustomerStatusChanged(change),
                 clock);
-        kafkaTemplate.send(Topics.CUSTOMER_EVENTS, cif, event).whenComplete((result, ex) -> {
-            if (ex != null) {
-                // Chua co outbox (BANK-046): gui loi la mat event, can nguoi kiem tra va gui lai
-                log.error("Failed to publish {} {} for customer {}", event.eventType(), event.eventId(), cif, ex);
-            } else {
-                log.info("Published {} {} for customer {}", event.eventType(), event.eventId(), cif);
-            }
-        });
+        outboxWriter.write(CustomerCreatedProducer.AGGREGATE_TYPE, change.cif(), Topics.CUSTOMER_EVENTS, event);
     }
 }

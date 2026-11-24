@@ -4,7 +4,7 @@ epic: E4
 title: transfer-service: bảng TRANSFER và máy trạng thái
 priority: High
 depends_on: [BANK-003, BANK-004]
-status: TODO
+status: DONE
 ---
 
 # BANK-040: transfer-service: bảng TRANSFER và máy trạng thái

@@ -4,7 +4,7 @@ epic: E4
 title: Tra cứu lịch sử và chi tiết lệnh chuyển khoản
 priority: Low
 depends_on: [BANK-045]
-status: TODO
+status: DONE
 ---
 
 # BANK-047: Tra cứu lịch sử và chi tiết lệnh chuyển khoản

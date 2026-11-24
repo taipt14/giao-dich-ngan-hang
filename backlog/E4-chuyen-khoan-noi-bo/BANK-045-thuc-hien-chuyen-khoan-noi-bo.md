@@ -4,7 +4,7 @@ epic: E4
 title: Thực hiện chuyển khoản nội bộ
 priority: High
 depends_on: [BANK-032, BANK-042, BANK-043, BANK-044]
-status: TODO
+status: DONE
 ---
 
 # BANK-045: Thực hiện chuyển khoản nội bộ

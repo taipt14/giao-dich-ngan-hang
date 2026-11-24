@@ -12,6 +12,7 @@
     <modules>
         <module>common/common-core</module>
         <module>common/common-events</module>
+        <module>common/common-outbox</module>
         <module>common/common-test</module>
         <module>services/api-gateway</module>
         <module>services/customer-service</module>

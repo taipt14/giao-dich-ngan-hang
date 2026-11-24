@@ -4,7 +4,7 @@ epic: E4
 title: Outbox pattern cho event nghiệp vụ
 priority: High
 depends_on: [BANK-045]
-status: TODO
+status: DONE
 ---
 
 # BANK-046: Outbox pattern cho event nghiệp vụ

@@ -36,17 +36,18 @@ public class CreateAccountService {
         var existingAccounts = accountRepository.countByCifAndAccountType(holder.cif(), accountType);
         var accountNo = AccountNumber.fromSequence(accountRepository.nextAccountNoSequence());
         var account = accountRepository.save(Account.open(accountNo, holder, accountType, existingAccounts, clock));
-        publishAfterCommit(account);
+        // Outbox (BANK-046): ghi event cung transaction, rollback thi khong co event nao duoc gui
+        accountOpenedProducer.send(account);
+        logAfterCommit(account);
         return account;
     }
 
-    // Muc 8 convention: khong gui Kafka trong transaction DB. Tam gui truc tiep sau commit, BANK-046 thay bang outbox
-    private void publishAfterCommit(Account account) {
+    // Moc nghiep vu chi log khi da commit
+    private void logAfterCommit(Account account) {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
                 log.info("Account {} opened for customer {}", account.getMaskedAccountNo(), account.getCif());
-                accountOpenedProducer.send(account);
             }
         });
     }

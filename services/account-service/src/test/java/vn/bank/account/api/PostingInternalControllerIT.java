@@ -263,6 +263,90 @@ class PostingInternalControllerIT extends AbstractIntegrationTest {
         assertThat(countJournals(referenceId)).isZero();
     }
 
+    @Test
+    void should_returnTransferJournalWithEntries_when_queriedByReferenceIdAfterPosting() {
+        // given: posting da ghi nhung ben goi khong nhan duoc response (lenh UNKNOWN o transfer-service)
+        var source = givenFundedAccount("1000000.00");
+        var dest = givenAccount("ACTIVE");
+        var referenceId = newReferenceId();
+        var posted = post(
+                transferBody(referenceId, line(source, "DEBIT", "300000.00"), line(dest, "CREDIT", "300000.00")),
+                PostingResponse.class);
+
+        // when
+        var response = findByReferenceId(referenceId, PostingListResponse.class);
+
+        // then
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().items()).hasSize(1);
+        var journal = response.getBody().items().getFirst();
+        assertThat(journal.journalId()).isEqualTo(posted.getBody().journalId());
+        assertThat(journal.referenceType()).hasToString("TRANSFER");
+        assertThat(journal.referenceId()).isEqualTo(referenceId);
+        assertThat(journal.entries()).isEqualTo(posted.getBody().entries());
+    }
+
+    @Test
+    void should_returnEmptyItems_when_noJournalForReferenceId() {
+        // given: posting bi tu choi (rollback) nen khong co journal
+        var source = givenFundedAccount("100.00");
+        var dest = givenAccount("ACTIVE");
+        var referenceId = newReferenceId();
+        post(
+                transferBody(referenceId, line(source, "DEBIT", "300000.00"), line(dest, "CREDIT", "300000.00")),
+                ErrorResponse.class);
+
+        // when
+        var response = findByReferenceId(referenceId, PostingListResponse.class);
+
+        // then
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().items()).isEmpty();
+    }
+
+    @Test
+    void should_returnAllJournalsInPostingOrder_when_transferAndReversalShareReferenceId() {
+        // given: journal TRANSFER va journal REVERSAL cung referenceId (docs/ledger.md 4.5)
+        var source = givenFundedAccount("1000000.00");
+        var dest = givenAccount("ACTIVE");
+        var referenceId = newReferenceId();
+        post(
+                transferBody(referenceId, line(source, "DEBIT", "300000.00"), line(dest, "CREDIT", "300000.00")),
+                PostingResponse.class);
+        var reversal =
+                """
+                {"referenceType":"REVERSAL","referenceId":"%s","description":"Dao but toan IT","lines":[%s,%s]}""".formatted(referenceId, line(dest, "DEBIT", "300000.00"), line(source, "CREDIT", "300000.00"));
+        assertThat(post(reversal, PostingResponse.class).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        // when
+        var response = findByReferenceId(referenceId, PostingListResponse.class);
+
+        // then
+        assertThat(response.getBody().items())
+                .extracting(item -> item.referenceType().name())
+                .containsExactly("TRANSFER", "REVERSAL");
+        assertThat(response.getBody().items())
+                .allSatisfy(item -> assertThat(item.entries()).hasSize(2));
+    }
+
+    @Test
+    void should_return400_when_referenceIdBlank() {
+        // when
+        var response = findByReferenceId(" ", ErrorResponse.class);
+
+        // then
+        assertError(response, HttpStatus.BAD_REQUEST, "VALIDATION_FAILED");
+    }
+
+    private <T> ResponseEntity<T> findByReferenceId(String referenceId, Class<T> responseType) {
+        return client.get()
+                .uri(uri -> uri.path(POSTINGS_PATH)
+                        .queryParam("referenceId", referenceId)
+                        .build())
+                .retrieve()
+                .toEntity(responseType);
+    }
+
     // Tai khoan nguon con co event cua lan nap tien: loc them theo referenceId cua journal can kiem tra
     private static ConsumerRecord<String, String> eventOf(
             KafkaTestConsumer consumer, String accountNo, String referenceId) {

@@ -102,7 +102,7 @@ class PostingServiceTest {
     }
 
     @Test
-    void should_evictCacheAndPublishBalanceChanged_when_committed() {
+    void should_writeBalanceChangedToOutboxInTransactionAndEvictCacheAfterCommit_when_posted() {
         // given
         givenNoJournal();
         givenSavedJournalId(12L);
@@ -110,18 +110,19 @@ class PostingServiceTest {
 
         // when
         service.post(DEPOSIT);
-        verify(producer, never()).send(any());
-        TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
 
-        // then: xoa cache moi tai khoan bi doi, event chi cho tai khoan khach hang
-        verify(balanceCache).evict(CUSTOMER_ACCOUNT);
-        verify(balanceCache).evict(CASH_VAULT);
+        // then: BalanceChanged ghi outbox ngay trong transaction, chi cho tai khoan khach hang
+        verify(balanceCache, never()).evict(any());
         var change = ArgumentCaptor.forClass(BalanceChange.class);
         verify(producer).send(change.capture());
         assertThat(change.getValue().accountNo()).isEqualTo(CUSTOMER_ACCOUNT);
         assertThat(change.getValue().direction()).isEqualTo(EntryDirection.CREDIT);
         assertThat(change.getValue().amount()).isEqualByComparingTo("1000000.00");
         assertThat(change.getValue().balanceAfter()).isEqualByComparingTo("1000000.00");
+        // xoa cache moi tai khoan bi doi chi sau commit
+        TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+        verify(balanceCache).evict(CUSTOMER_ACCOUNT);
+        verify(balanceCache).evict(CASH_VAULT);
     }
 
     @Test

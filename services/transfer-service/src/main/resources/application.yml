@@ -26,8 +26,50 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+        type:
+          # Instant luu vao cot TIMESTAMP (gia tri UTC), khong dung TIMESTAMP WITH TIME ZONE
+          preferred_instant_jdbc_type: TIMESTAMP
+  kafka:
+    # TransferCompleted/TransferFailed gui qua outbox len transfer.events (BANK-046)
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   flyway:
     locations: classpath:db/migration
+  data:
+    redis:
+      # Lop idempotency thu nhat (BANK-041); Redis loi o luong bat buoc nay tra 503 (muc 12 convention)
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      connect-timeout: 500ms
+      timeout: 500ms
+  http:
+    clients:
+      # Goi service khac khong duoc treo request lau: loi ket noi/timeout tra 503 cho client retry
+      connect-timeout: 2s
+      read-timeout: 5s
 
 server:
   port: 8084
+
+bank:
+  transfer:
+    account-service:
+      base-url: ${ACCOUNT_SERVICE_URL:http://localhost:8082}
+    idempotency:
+      # Muc 6 kien-truc.md: key idem:{clientId}:{idempotencyKey} song 24h
+      ttl: 24h
+    otp:
+      # Muc 6 kien-truc.md: otp:{transferId} va otp:fail:{transferId} song 3 phut
+      ttl: 3m
+      # Sai lan thu 5 → lenh FAILED (OTP_MAX_ATTEMPTS)
+      max-attempts: 5
+      max-resend: 3
+      resend-interval: 30s
+      # Bo dem otp:resend:{transferId} phai song lau hon OTP, de het OTP roi van khong gui lai qua so lan
+      resend-counter-ttl: 24h
+      # Chi bat o moi truong dev (profile local): ghi OTP dang ro ra log thay cho SMS
+      dev-log-enabled: false
+    posting:
+      # Loi ky thuat (timeout, 5xx) khi goi POST /internal/postings: retry toi da 3 lan (an toan vi posting idempotent
+      # theo transferId); van loi → lenh UNKNOWN cho tra soat
+      max-retries: 3
+      retry-wait: 500ms

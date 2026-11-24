@@ -34,6 +34,11 @@ spring:
     consumer:
       # Group moi (lan dau deploy) doc tu dau topic: khong bo sot event khach hang bi khoa truoc do
       auto-offset-reset: earliest
+  task:
+    scheduling:
+      pool:
+        # Doi soat cuoi ngay (ReconcileJob) chay lau khong duoc chan job gui outbox moi 1 giay (BANK-046)
+        size: 2
   flyway:
     locations: classpath:db/migration
   data:

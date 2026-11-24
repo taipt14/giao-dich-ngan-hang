@@ -15,7 +15,6 @@ import java.time.ZoneOffset;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import vn.bank.common.error.BusinessException;
 import vn.bank.customer.domain.Customer;
@@ -65,31 +64,15 @@ class RegisterCustomerServiceTest {
     }
 
     @Test
-    void should_publishCustomerCreatedOnlyAfterCommit_when_customerRegistered() {
+    void should_writeCustomerCreatedToOutboxInsideTransaction_when_customerRegistered() {
         // given
         givenNewCustomerSaved();
 
         // when
         var customer = registerCustomerService.register(PROFILE);
 
-        // then
-        verify(customerCreatedProducer, never()).send(any());
-        TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+        // then: ghi outbox ngay trong transaction, khong doi afterCommit (rollback: CustomerOutboxIT)
         verify(customerCreatedProducer).send(customer);
-    }
-
-    @Test
-    void should_notPublishEvent_when_transactionRolledBack() {
-        // given
-        givenNewCustomerSaved();
-
-        // when
-        registerCustomerService.register(PROFILE);
-        TransactionSynchronizationManager.getSynchronizations()
-                .forEach(sync -> sync.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
-
-        // then
-        verify(customerCreatedProducer, never()).send(any());
     }
 
     @Test

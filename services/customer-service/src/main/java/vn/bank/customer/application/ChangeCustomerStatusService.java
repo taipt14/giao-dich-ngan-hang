@@ -28,12 +28,14 @@ public class ChangeCustomerStatusService {
         var customer = getCustomerService.getCustomer(cif);
         var change = customer.changeStatus(target, reason, clock);
         CustomerFlusher.flush(customerRepository, customer);
-        publishAfterCommit(change);
+        // Outbox (BANK-046): ghi event cung transaction, rollback thi khong co event nao duoc gui
+        customerStatusChangedProducer.send(change);
+        logAfterCommit(change);
         return customer;
     }
 
-    // Muc 8 convention: khong gui Kafka trong transaction DB. Tam gui truc tiep sau commit, BANK-046 thay bang outbox
-    private void publishAfterCommit(CustomerStatusChange change) {
+    // Moc nghiep vu chi log khi da commit
+    private void logAfterCommit(CustomerStatusChange change) {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
@@ -42,7 +44,6 @@ public class ChangeCustomerStatusService {
                         change.cif(),
                         change.previousStatus(),
                         change.status());
-                customerStatusChangedProducer.send(change);
             }
         });
     }

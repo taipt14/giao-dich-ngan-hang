@@ -4,7 +4,7 @@ epic: E4
 title: Hạn mức giao dịch theo lần và theo ngày
 priority: High
 depends_on: [BANK-041]
-status: TODO
+status: DONE
 ---
 
 # BANK-043: Hạn mức giao dịch theo lần và theo ngày
